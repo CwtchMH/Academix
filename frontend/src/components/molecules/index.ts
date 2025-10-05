@@ -1,7 +1,11 @@
 export { FormField } from './FormField'
 export { LoginForm } from './LoginForm'
 export { RegisterForm } from './RegisterForm'
+export { Navbar } from './Navbar'
+export { Sidebar } from './Sidebar'
 
 export type { FormFieldProps } from './FormField'
 export type { LoginFormProps, LoginFormData } from './LoginForm'
 export type { RegisterFormProps, RegisterFormData } from './RegisterForm'
+export type { NavbarProps } from './Navbar'
+export type { SidebarProps } from './Sidebar'

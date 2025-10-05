@@ -1,9 +1,10 @@
-@use "./variables.scss";
+@use './variables.scss';
 
 /** components */
 
 /** pages */
-@use "./pages/user.scss";
+@use './pages/user.scss';
+@use './pages/main.scss';
 
 html,
 body {
