@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Web3 App - Kết nối ví và quản lý tài sản",
+  title: "Academix - Your Web3 Learning Platform", // Cập nhật title cho phù hợp
   description:
-    "Ứng dụng Web3 với các chức năng kết nối ví, xem số dư và chuyển đổi chain",
+    "Ứng dụng học tập Web3 với các bài thi và chứng chỉ trên blockchain",
 };
 
 export default function RootLayout({
@@ -28,6 +28,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {/* THÊM DÒNG NÀY ĐỂ TẢI FONT ICON 
+      */}
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+          rel="stylesheet"
+        />
+      </head>
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -1,32 +1,26 @@
-import { Header } from "@/components/layout/Header";
-import MainMenu from "@/components/layout/MainMenu";
+// src/app/(privateLayout)/layout.tsx
 import React from "react";
-import logoIcon from "../../../public/logo-icon.svg";
-import { Divider, Space } from "antd";
-import Image from "next/image";
+import { Sidebar } from "@/components/organisms/Sidebar/Sidebar";
+import { Header } from "@/components/layout/Header";
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
+const PrivateLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <>
-      {/* <Header /> */}
-      <main className="flex min-h-[100vh]">
-        <div className=" w-full max-w-[236px] bg-white px-2">
-          <Space align="center" className="my-4 mx-2">
-            <Image src={logoIcon.src} alt="logo" width={32} height={32} />
-            <p className="font-bold text-[24px] text-black">Academix</p>
-          </Space>
-          <Divider className="!my-2" />
-          <MainMenu />
-        </div>
-        <div className="flex-1 max-w-[calc(100%-236px)]">
-          <Header />
-          <div className="content relative px-10 py-8 bg-[#f9fafb] min-h-[100vh]">
-            <div>{children}</div>
-          </div>
-        </div>
-      </main>
-    </>
+    <div className="flex h-screen bg-[var(--light-gray)]">
+      {/* Sử dụng component Sidebar mới */}
+      <Sidebar />
+      
+      {/* Vùng nội dung chính */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Sử dụng component Header đã được nâng cấp */}
+        <Header />
+
+        {/* Đây là nơi các trang con (như ExamsPage) sẽ được render */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 };
 
-export default Layout;
+export default PrivateLayout;
