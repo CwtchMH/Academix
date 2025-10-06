@@ -37,7 +37,7 @@ const MainMenu = () => {
     },
     {
       label: "Certificates",
-      link: "/user4",
+      link: "/certificate",
       icon: certificateIcon,
     },
   ];
