@@ -1,38 +1,41 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { Web3Providers } from "@/lib/providers";
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import './globals.css'
+import { Web3Providers } from '@/lib/providers'
+import { AuthProvider } from '@/providers/AuthProvider'
 
-import "../styles/style.scss";
+import '../styles/style.scss'
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+  variable: '--font-geist-sans',
+  subsets: ['latin']
+})
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  variable: '--font-geist-mono',
+  subsets: ['latin']
+})
 
 export const metadata: Metadata = {
-  title: "Web3 App - Kết nối ví và quản lý tài sản",
+  title: 'Web3 App - Kết nối ví và quản lý tài sản',
   description:
-    "Ứng dụng Web3 với các chức năng kết nối ví, xem số dư và chuyển đổi chain",
-};
+    'Ứng dụng Web3 với các chức năng kết nối ví, xem số dư và chuyển đổi chain'
+}
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Web3Providers>{children}</Web3Providers>
+        <Web3Providers>
+          <AuthProvider>{children}</AuthProvider>
+        </Web3Providers>
       </body>
     </html>
-  );
+  )
 }

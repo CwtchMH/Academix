@@ -1,43 +1,68 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { LoginCard } from '@/components/organisms'
+import { useLoginApi, saveTokens, parseApiError } from '@/services'
+import type { LoginRequest } from '@/services'
+import { useAuth } from '@/stores/auth'
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter()
+  const loginMutation = useLoginApi()
+  const [errorMessage, setErrorMessage] = useState<string>('')
+  const { setUser } = useAuth()
 
-  const handleLogin = async (data: any) => {
-    console.log('Login data:', data)
-    setLoading(true)
-    setError('')
-
-    // Simulate API call
+  const handleLogin = async (
+    formData: LoginRequest & { rememberMe: boolean }
+  ) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Reset error message
+      setErrorMessage('')
 
-      // Simulate success/error
-      if (data.email === 'admin@test.com' && data.password === 'password') {
-        console.log('Login successful!')
-        // TODO: Redirect to dashboard
+      // Extract only needed fields for API
+      const { identifier, password } = formData
+
+      const response = await loginMutation.mutateAsync({
+        data: { identifier, password }
+      })
+
+      if (response.success) {
+        // Lưu tokens
+        saveTokens(response.data.accessToken, response.data.refreshToken)
+        setUser(response.data.user)
+
+        // Redirect based on role
+        const dashboardUrl =
+          response.data.user.role === 'teacher'
+            ? '/dashboard/teacher'
+            : '/dashboard/student'
+        router.push(dashboardUrl)
       } else {
-        setError('Invalid email or password')
+        // Backend trả về success: false (rare case)
+        setErrorMessage(response.message || 'Đăng nhập thất bại')
       }
-    } catch (err) {
-      setError('Login failed. Please try again.')
-    } finally {
-      setLoading(false)
+    } catch (err: any) {
+      console.error('Login error:', err)
+
+      // Parse error message từ backend
+      const errorMsg = parseApiError(err)
+      setErrorMessage(errorMsg)
     }
   }
 
   return (
     <>
-      <LoginCard onSubmit={handleLogin} loading={loading} error={error} />
+      <LoginCard
+        onSubmit={handleLogin}
+        loading={loginMutation.isPending}
+        error={errorMessage || undefined}
+      />
 
       {/* Copyright */}
       <div className="text-center mt-8">
         <p className="text-sm text-gray-500">
-          © 2024 University Name. All rights reserved.
+          © 2025 Academix. All rights reserved.
         </p>
       </div>
     </>

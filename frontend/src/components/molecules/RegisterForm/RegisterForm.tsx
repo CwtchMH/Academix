@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { Form, Select } from 'antd'
 import { Input, Button, Checkbox, Link } from '@/components/atoms'
-import { FormField } from '@/components/molecules/FormField'
 import { RegisterFormProps, RegisterFormData } from './RegisterForm.types'
 
 const RegisterForm: React.FC<RegisterFormProps> = ({
@@ -11,143 +10,146 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   error,
   className = ''
 }) => {
-  const [formData, setFormData] = useState<RegisterFormData>({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    agreeToTerms: false
-  })
+  const [form] = Form.useForm<RegisterFormData>()
 
-  const [validationErrors, setValidationErrors] = useState<
-    Partial<RegisterFormData>
-  >({})
-
-  const validateForm = (): boolean => {
-    const errors: Partial<RegisterFormData> = {}
-
-    if (!formData.fullName.trim()) {
-      errors.fullName = 'Full name is required'
-    }
-
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Please enter a valid email'
-    }
-
-    if (!formData.password) {
-      errors.password = 'Password is required'
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters'
-    }
-
-    if (!formData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password'
-    } else if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match'
-    }
-
-    if (!formData.agreeToTerms) {
-      errors.agreeToTerms = 'You must agree to the terms and conditions'
-    }
-
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
+  const handleSubmit = async (values: RegisterFormData) => {
+    onSubmit(values)
   }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (validateForm()) {
-      onSubmit(formData)
-    }
-  }
-
-  const isFormValid =
-    formData.fullName &&
-    formData.email &&
-    formData.password &&
-    formData.confirmPassword &&
-    formData.agreeToTerms &&
-    formData.password === formData.confirmPassword
 
   return (
-    <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
-      <FormField error={validationErrors.fullName}>
-        <Input
-          id="fullName"
-          placeholder="Full Name"
-          type="text"
-          value={formData.fullName}
-          onChange={(value) =>
-            setFormData((prev) => ({ ...prev, fullName: value }))
+    <Form
+      form={form}
+      onFinish={handleSubmit}
+      layout="vertical"
+      className={`space-y-6 ${className}`}
+      initialValues={{ agreeToTerms: false }}
+    >
+      <Form.Item
+        name="username"
+        rules={[
+          {
+            required: true,
+            message: 'Vui lòng nhập tên đăng nhập'
+          },
+          {
+            min: 2,
+            message: 'Tên đăng nhập phải có ít nhất 2 ký tự'
+          },
+          {
+            whitespace: true,
+            message: 'Tên đăng nhập không được chỉ chứa khoảng trắng'
           }
-          required
-        />
-      </FormField>
+        ]}
+      >
+        <Input id="username" placeholder="Tên đăng nhập" type="text" />
+      </Form.Item>
 
-      <FormField error={validationErrors.email}>
-        <Input
-          id="email"
-          placeholder="University Email"
-          type="email"
-          value={formData.email}
-          onChange={(value) =>
-            setFormData((prev) => ({ ...prev, email: value }))
+      <Form.Item
+        name="email"
+        rules={[
+          {
+            required: true,
+            message: 'Vui lòng nhập email'
+          },
+          {
+            type: 'email',
+            message: 'Email không hợp lệ'
           }
-          required
-        />
-      </FormField>
+        ]}
+      >
+        <Input id="email" placeholder="Email" type="email" />
+      </Form.Item>
 
-      <FormField error={validationErrors.password}>
-        <Input
-          id="password"
-          placeholder="Password"
-          type="password"
-          value={formData.password}
-          onChange={(value) =>
-            setFormData((prev) => ({ ...prev, password: value }))
+      <Form.Item
+        name="role"
+        rules={[
+          {
+            required: true,
+            message: 'Vui lòng chọn vai trò'
           }
-          required
+        ]}
+      >
+        <Select
+          placeholder="Chọn vai trò"
+          size="large"
+          options={[
+            { label: 'Học sinh / Sinh viên', value: 'student' },
+            { label: 'Giáo viên', value: 'teacher' }
+          ]}
         />
-      </FormField>
+      </Form.Item>
 
-      <FormField error={validationErrors.confirmPassword}>
+      <Form.Item
+        name="password"
+        rules={[
+          {
+            required: true,
+            message: 'Vui lòng nhập mật khẩu'
+          },
+          {
+            min: 6,
+            message: 'Mật khẩu phải có ít nhất 6 ký tự'
+          },
+          {
+            pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+            message: 'Mật khẩu phải chứa chữ hoa, chữ thường và số'
+          }
+        ]}
+      >
+        <Input id="password" placeholder="Mật khẩu" type="password" />
+      </Form.Item>
+
+      <Form.Item
+        name="confirmPassword"
+        dependencies={['password']}
+        rules={[
+          {
+            required: true,
+            message: 'Vui lòng xác nhận mật khẩu'
+          },
+          ({ getFieldValue }) => ({
+            validator(_, value) {
+              if (!value || getFieldValue('password') === value) {
+                return Promise.resolve()
+              }
+              return Promise.reject(new Error('Mật khẩu không khớp'))
+            }
+          })
+        ]}
+      >
         <Input
           id="confirmPassword"
-          placeholder="Confirm Password"
+          placeholder="Xác nhận mật khẩu"
           type="password"
-          value={formData.confirmPassword}
-          onChange={(value) =>
-            setFormData((prev) => ({ ...prev, confirmPassword: value }))
-          }
-          required
         />
-      </FormField>
+      </Form.Item>
 
-      <div className="space-y-2">
+      <Form.Item
+        name="agreeToTerms"
+        valuePropName="checked"
+        rules={[
+          {
+            validator: (_, value) =>
+              value
+                ? Promise.resolve()
+                : Promise.reject(
+                    new Error('Bạn phải đồng ý với điều khoản và điều kiện')
+                  )
+          }
+        ]}
+      >
         <Checkbox
           id="agreeToTerms"
-          checked={formData.agreeToTerms}
-          onChange={(checked) =>
-            setFormData((prev) => ({ ...prev, agreeToTerms: checked }))
-          }
           label={
             <span>
-              I agree to the{' '}
+              Tôi đồng ý với{' '}
               <Link href="/terms" className="text-blue-600 hover:text-blue-800">
-                Terms & Conditions
+                Điều khoản & Điều kiện
               </Link>
             </span>
           }
         />
-        {validationErrors.agreeToTerms && (
-          <p className="text-sm text-red-600">
-            {validationErrors.agreeToTerms}
-          </p>
-        )}
-      </div>
+      </Form.Item>
 
       {error && (
         <div className="text-sm text-red-600 text-center bg-red-50 p-3 rounded-lg">
@@ -155,17 +157,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         </div>
       )}
 
-      <Button
-        htmlType="submit"
-        variant="primary"
-        size="large"
-        fullWidth
-        loading={loading}
-        disabled={!isFormValid}
-      >
-        Create Account
-      </Button>
-    </form>
+      <Form.Item className="mb-0">
+        <Button
+          htmlType="submit"
+          variant="primary"
+          size="large"
+          fullWidth
+          loading={loading}
+        >
+          Tạo tài khoản
+        </Button>
+      </Form.Item>
+    </Form>
   )
 }
 

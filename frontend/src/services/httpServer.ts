@@ -8,65 +8,65 @@ import axios, {
   type AxiosInstance,
   type AxiosRequestConfig,
   type AxiosResponse,
-  type InternalAxiosRequestConfig,
-} from "axios";
-import { cookies } from "next/headers";
+  type InternalAxiosRequestConfig
+} from 'axios'
+import { cookies } from 'next/headers'
 
 // import { USER_SERVICE_ENDPOINT } from ".";
 
 export interface Response<T> {
-  records: T;
-  total_records: number;
+  records: T
+  total_records: number
 }
 
 class AxiosClient {
-  private readonly axiosInstance: AxiosInstance;
-  static instance: AxiosClient;
-  private retryCount = 0;
+  private readonly axiosInstance: AxiosInstance
+  static instance: AxiosClient
+  private retryCount = 0
 
   static getInstance() {
     if (!AxiosClient.instance) {
-      AxiosClient.instance = new AxiosClient();
+      AxiosClient.instance = new AxiosClient()
     }
-    return AxiosClient.instance;
+    return AxiosClient.instance
   }
 
   setAccessToken = (accessToken: string) => {
-    window.localStorage.setItem("access_token", accessToken);
-  };
+    window.localStorage.setItem('access_token', accessToken)
+  }
 
   public constructor() {
     this.axiosInstance = axios.create({
       headers: {
-        "content-type": "application/json",
-      },
-    });
+        'content-type': 'application/json'
+      }
+    })
 
-    this._initializeInterceptor();
+    this._initializeInterceptor()
   }
 
   private _initializeInterceptor = () => {
-    this.axiosInstance.interceptors.request.use(this._handleRequest);
+    this.axiosInstance.interceptors.request.use(this._handleRequest)
     this.axiosInstance.interceptors.response.use(
       this._handleResponse
       // this._handleError,
-    );
-  };
+    )
+  }
 
   post<T>(
     url: string,
     data?: unknown,
     config?: AxiosRequestConfig
   ): Promise<T> {
-    return this.axiosInstance.post(url, data, config);
+    return this.axiosInstance.post(url, data, config)
   }
 
   get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    return this.axiosInstance.get(url, config);
+    return this.axiosInstance.get(url, config)
   }
 
   put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    return this.axiosInstance.put(url, data, config);
+    return this.axiosInstance.put(url, data, config)
   }
 
   patch<T>(
@@ -74,32 +74,44 @@ class AxiosClient {
     data?: unknown,
     config?: AxiosRequestConfig
   ): Promise<T> {
-    return this.axiosInstance.patch(url, data, config);
+    return this.axiosInstance.patch(url, data, config)
   }
 
   delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    return this.axiosInstance.delete(url, config);
+    return this.axiosInstance.delete(url, config)
   }
 
   private _handleRequest = async (config: InternalAxiosRequestConfig) => {
-    let token = (await cookies()).get("token")?.value;
+    // Danh sách các endpoints không cần token (public endpoints)
+    const publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh']
+
+    // Check nếu là public endpoint thì KHÔNG thêm token
+    const isPublicEndpoint = publicEndpoints.some((endpoint) =>
+      config.url?.includes(endpoint)
+    )
+
+    if (isPublicEndpoint) {
+      return config
+    }
+
+    let token = (await cookies()).get('token')?.value
 
     if (token && config.headers && !config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`
     }
-    return config;
-  };
+    return config
+  }
 
   private _handleResponse = (response: AxiosResponse) => {
     if (
-      !(response.headers["content-type"] as string).includes("application/json")
+      !(response.headers['content-type'] as string).includes('application/json')
     )
-      return response;
+      return response
 
-    if (response.data) return response.data;
+    if (response.data) return response.data
 
-    return response;
-  };
+    return response
+  }
 }
 
-export default AxiosClient.getInstance();
+export default AxiosClient.getInstance()

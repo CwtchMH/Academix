@@ -1,6 +1,7 @@
 import { LoginForm } from '@/components/molecules'
 import { Link } from '@/components/atoms'
 import { LoginCardProps } from './LoginCard.types'
+import Image from 'next/image'
 
 const LoginCard: React.FC<LoginCardProps> = ({
   onSubmit,
@@ -17,13 +18,17 @@ const LoginCard: React.FC<LoginCardProps> = ({
     >
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-          <div className="w-8 h-8 bg-white rounded-sm"></div>
-        </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          University Login
-        </h1>
-        <p className="text-gray-500">Access your student portal</p>
+        <Image
+          src="/academix-logo-white.png"
+          alt="Academix Logo"
+          width={64}
+          height={64}
+          className="mx-auto mb-4"
+        />
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Đăng nhập</h1>
+        <p className="text-gray-500 text-sm lg:text-base">
+          Truy cập và khám phá cổng thông tin
+        </p>
       </div>
 
       {/* Form */}
@@ -31,10 +36,10 @@ const LoginCard: React.FC<LoginCardProps> = ({
 
       {/* Footer */}
       <div className="mt-6 text-center">
-        <p className="text-gray-600">
-          Don't have an account?{' '}
+        <p className="text-gray-600 text-sm lg:text-base">
+          Chưa có tài khoản?{' '}
           <Link href="/register" className="font-medium">
-            Sign up
+            Đăng ký
           </Link>
         </p>
       </div>
