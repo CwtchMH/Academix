@@ -220,3 +220,8 @@ export const USER_SERVICE_ENDPOINT = getApiEndpoint(API_SERVICES.AUTH_SERVICE)
 // Export API service methods
 export const TestService = new ApiService(TEST_SERVICE_ENDPOINT)
 export const AuthService = new ApiService(USER_SERVICE_ENDPOINT)
+
+// Export organized services
+export * from './api'
+export * from './types'
+export * from './utils'

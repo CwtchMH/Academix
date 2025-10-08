@@ -26,13 +26,13 @@ const Button: React.FC<ButtonProps> = ({
   const getSizeClasses = () => {
     switch (size) {
       case 'small':
-        return 'h-8 px-3 text-sm'
+        return '!h-8 px-3 text-sm'
       case 'medium':
-        return 'h-10 px-4 text-base'
+        return '!h-10 px-4 text-base'
       case 'large':
-        return 'h-12 px-6 text-lg'
+        return '!h-12 py-2 px-6 !text-lg !font-bold'
       default:
-        return 'h-10 px-4 text-base'
+        return '!h-10 px-4 text-base'
     }
   }
 

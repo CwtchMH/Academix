@@ -18,7 +18,7 @@ import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/user.decorator';
-import { ResponseHelper, ApiResponseDto } from '../../common/dto/response.dto';
+import { ResponseHelper } from '../../common/dto/response.dto';
 import type { IUser } from '../../common/interfaces';
 
 @ApiTags('Authentication')
@@ -36,31 +36,22 @@ export class AuthController {
     schema: {
       example: {
         success: true,
-        data: {
-          user: {
-            id: '507f1f77bcf86cd799439011',
-            email: 'user@example.com',
-            role: 'student',
-            profile: {
-              firstName: 'John',
-              lastName: 'Doe',
-            },
-          },
-          accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        message: 'User registered successfully',
+        meta: {
+          timestamp: '2025-10-09T10:30:00.123Z',
         },
       },
     },
   })
   async register(@Body() registerDto: RegisterDto) {
-    const result = await this.authService.register(registerDto);
-    return ResponseHelper.success(result, 'User registered successfully');
+    await this.authService.register(registerDto);
+    return ResponseHelper.success(undefined, 'User registered successfully');
   }
 
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login user' })
+  @ApiOperation({ summary: 'Login user with username or email' })
   @ApiResponse({
     status: 200,
     description: 'User logged in successfully',
@@ -70,6 +61,7 @@ export class AuthController {
         data: {
           user: {
             id: '507f1f77bcf86cd799439011',
+            username: 'johndoe',
             email: 'user@example.com',
             role: 'student',
           },
@@ -91,8 +83,36 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'User profile retrieved successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          user: {
+            id: '507f1f77bcf86cd799439011',
+            username: 'johndoe',
+            email: 'user@example.com',
+            role: 'student',
+            createdAt: '2025-10-07T10:30:00.000Z',
+            updatedAt: '2025-10-07T10:30:00.000Z',
+          },
+        },
+        message: 'Profile retrieved successfully',
+      },
+    },
   })
   getProfile(@CurrentUser() user: IUser) {
-    return ResponseHelper.success({ user }, 'Profile retrieved successfully');
+    // Chỉ trả về các trường cần thiết
+    const basicUserInfo = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+    return ResponseHelper.success(
+      { user: basicUserInfo },
+      'Profile retrieved successfully',
+    );
   }
 }

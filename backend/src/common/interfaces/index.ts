@@ -1,11 +1,21 @@
 export interface IUser {
   id: string;
+  username: string;
   email: string;
   passwordHash: string;
-  fullName: string;
+  fullName?: string;
   dateOfBirth?: Date;
   role: 'student' | 'teacher' | 'admin';
   walletAddress?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IUserProfile {
+  id: string;
+  username: string;
+  email: string;
+  role: 'student' | 'teacher' | 'admin';
   createdAt: Date;
   updatedAt: Date;
 }

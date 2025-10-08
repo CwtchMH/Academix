@@ -1,5 +1,5 @@
 export interface LoginFormData {
-  email: string
+  identifier: string // Email hoặc username
   password: string
   rememberMe: boolean
 }

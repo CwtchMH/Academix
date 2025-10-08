@@ -1,8 +1,9 @@
 export interface RegisterFormData {
-  fullName: string
+  username: string
   email: string
   password: string
   confirmPassword: string
+  role: 'student' | 'teacher'
   agreeToTerms: boolean
 }
 

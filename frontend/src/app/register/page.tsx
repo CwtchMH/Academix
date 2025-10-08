@@ -1,43 +1,60 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { RegisterCard } from '@/components/organisms'
+import { useRegisterApi, parseApiError } from '@/services'
+import type { RegisterRequest } from '@/services'
 
 export default function RegisterPage() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter()
+  const registerMutation = useRegisterApi()
+  const [errorMessage, setErrorMessage] = useState<string>('')
 
-  const handleRegister = async (data: any) => {
-    console.log('Register data:', data)
-    setLoading(true)
-    setError('')
-
-    // Simulate API call
+  const handleRegister = async (
+    formData: RegisterRequest & {
+      confirmPassword: string
+      agreeToTerms: boolean
+    }
+  ) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Reset error message
+      setErrorMessage('')
 
-      // Simulate success/error
-      if (data.email && data.password) {
-        console.log('Registration successful!')
-        // TODO: Redirect to login or dashboard
+      // Extract only needed fields for API
+      const { username, email, password, role } = formData
+
+      const response = await registerMutation.mutateAsync({
+        data: { username, email, password, role }
+      })
+
+      if (response.success) {
+        router.push('/login')
       } else {
-        setError('Registration failed. Please try again.')
+        // Backend trả về success: false (rare case)
+        setErrorMessage(response.message || 'Đăng ký thất bại')
       }
-    } catch (err) {
-      setError('Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
+    } catch (err: any) {
+      console.error('Register error:', err)
+
+      // Parse error message từ backend
+      const errorMsg = parseApiError(err)
+      setErrorMessage(errorMsg)
     }
   }
 
   return (
     <>
-      <RegisterCard onSubmit={handleRegister} loading={loading} error={error} />
+      <RegisterCard
+        onSubmit={handleRegister}
+        loading={registerMutation.isPending}
+        error={errorMessage || undefined}
+      />
 
       {/* Copyright */}
       <div className="text-center mt-8">
         <p className="text-sm text-gray-500">
-          © 2024 University Name. All rights reserved.
+          © 2025 Academix. All rights reserved.
         </p>
       </div>
     </>

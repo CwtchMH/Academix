@@ -1,7 +1,7 @@
 export interface CheckboxProps {
   checked?: boolean
   onChange?: (checked: boolean) => void
-  label?: string
+  label?: string | React.ReactNode
   disabled?: boolean
   className?: string
   name?: string
