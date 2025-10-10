@@ -8,56 +8,38 @@ import { useAuthHook } from '@/hooks/useAuthHook'
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname()
-  const { getUser, user, clearUser } = useAuth()
-  const initialized = useRef(false)
+  const { getUser, clearUser } = useAuth()
+  const fetchingPathRef = useRef<string | null>(null)
 
   useAuthHook()
 
-  // Effect 1: Initialize - chỉ chạy 1 lần duy nhất
   useEffect(() => {
-    if (initialized.current) return
+    const token = getAccessToken()
 
-    const initializeAuth = async () => {
+    if (!token) {
+      clearUser()
+      fetchingPathRef.current = null
+      return
+    }
+
+    if (fetchingPathRef.current === pathname) {
+      return
+    }
+
+    fetchingPathRef.current = pathname
+
+    const fetchUser = async (path: string) => {
       try {
-        const token = getAccessToken()
-
-        if (token && !user) {
-          console.log('[AuthProvider] Initialize: Fetching user...')
-          initialized.current = true
-          await getUser()
+        await getUser()
+      } finally {
+        if (fetchingPathRef.current === path) {
+          fetchingPathRef.current = null
         }
-      } catch (error) {
-        console.error('[AuthProvider] Failed to initialize auth:', error)
-        clearUser()
-        initialized.current = false
       }
     }
 
-    initializeAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Effect 2: Refetch khi pathname thay đổi
-  useEffect(() => {
-    // Skip lần đầu (đã fetch ở effect 1)
-    if (!initialized.current) return
-
-    const refetchUser = async () => {
-      try {
-        const token = getAccessToken()
-
-        if (token && user) {
-          console.log('[AuthProvider] Pathname changed: Refetching user...')
-          await getUser()
-        }
-      } catch (error) {
-        console.error('[AuthProvider] Failed to refetch user:', error)
-      }
-    }
-
-    refetchUser()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
+    fetchUser(pathname)
+  }, [pathname, clearUser, getUser])
 
   return <>{children}</>
 }
