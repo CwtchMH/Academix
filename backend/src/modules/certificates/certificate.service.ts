@@ -9,15 +9,27 @@ import {
   IssueCertificateDto,
   CertificatesQueryDto,
 } from './dto/certificate.dto';
+import { User, UserDocument } from 'src/database/schemas/user.schema';
+import { Course, CourseDocument } from 'src/database/schemas/course.schema';
+import {
+  Submission,
+  SubmissionDocument,
+} from 'src/database/schemas/submission.schema';
 
 @Injectable()
 export class CertificateService {
   constructor(
     @InjectModel(Certificate.name)
     private readonly certificateModel: Model<CertificateDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
+    @InjectModel(Course.name)
+    private readonly courseModel: Model<CourseDocument>,
+    @InjectModel(Submission.name)
+    private readonly submissionModel: Model<SubmissionDocument>,
   ) {}
 
-  async issue(dto: IssueCertificateDto): Promise<CertificateDocument> {
+  async issue(dto: IssueCertificateDto) {
     const certificate = new this.certificateModel({
       studentId: new Types.ObjectId(dto.studentId),
       courseId: new Types.ObjectId(dto.courseId),
@@ -29,7 +41,15 @@ export class CertificateService {
       issuedAt: dto.issuedAt ? new Date(dto.issuedAt) : new Date(),
       outdateTime: dto.outdateTime ? new Date(dto.outdateTime) : undefined,
     });
-    return await certificate.save();
+
+    const savedCertificate = await certificate.save();
+
+    return await this.certificateModel
+      .findById(savedCertificate._id)
+      .populate('studentId', 'username email fullName role')
+      .populate('courseId', 'courseName')
+      .populate('submissionId', 'score submittedAt')
+      .lean();
   }
 
   async list(query: CertificatesQueryDto) {
@@ -43,18 +63,40 @@ export class CertificateService {
     const [items, total] = await Promise.all([
       this.certificateModel
         .find(filter)
+        .populate('studentId', 'username email fullName role')
+        .populate('courseId', 'courseName')
+        .populate('submissionId', 'score submittedAt')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
       this.certificateModel.countDocuments(filter),
     ]);
+    const dataResponse = items.map((item) => {
+      return {
+        student: item.studentId || {},
+        course: item.courseId || {},
+        submission: item.submissionId || {},
+        tokenId: item.tokenId || '',
+        ipfsHash: item.ipfsHash || '',
+        transactionHash: item.transactionHash || '',
+        issuedAt: item.issuedAt || '',
+        outdateTime: item.outdateTime || '',
+        status: item.status || '',
+        createdAt: item.createdAt || '',
+      };
+    });
 
-    return { items, total, page, limit };
+    return { items: dataResponse, total, page, limit };
   }
 
   async getById(id: string) {
-    const cert = await this.certificateModel.findById(id).lean();
+    const cert = await this.certificateModel
+      .findById(id)
+      .populate('studentId', 'username email fullName role')
+      .populate('courseId', 'courseName')
+      .populate('submissionId', 'score submittedAt')
+      .lean();
     if (!cert) throw new NotFoundException('Certificate not found');
     return cert;
   }
@@ -74,6 +116,13 @@ export class CertificateService {
     if (transactionHash) cert.transactionHash = transactionHash;
     // reason can be stored later if we add a field
     await cert.save();
-    return cert.toObject();
+
+    // Return populated data
+    return await this.certificateModel
+      .findById(id)
+      .populate('studentId', 'username email fullName role')
+      .populate('courseId', 'courseName')
+      .populate('submissionId', 'score submittedAt')
+      .lean();
   }
 }
