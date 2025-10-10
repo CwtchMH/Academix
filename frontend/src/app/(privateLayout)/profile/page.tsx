@@ -15,13 +15,7 @@ import { clearAuth } from '@/services/utils/auth.utils'
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, isLoading, clearUser } = useAuth()
-
-  const handleLogout = () => {
-    clearAuth()
-    clearUser()
-    router.push('/login')
-  }
+  const { user, isLoading } = useAuth()
 
   if (isLoading) {
     return (
@@ -32,16 +26,13 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="mb-6 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">
             Thông tin cá nhân
           </h1>
-          <Button danger icon={<LogoutOutlined />} onClick={handleLogout}>
-            Đăng xuất
-          </Button>
         </div>
 
         {/* User Card */}
@@ -137,9 +128,6 @@ export default function ProfilePage() {
             </Button>
             <Button block size="large">
               Đổi mật khẩu
-            </Button>
-            <Button block size="large" onClick={() => router.back()}>
-              Quay lại
             </Button>
           </Space>
         </Card>
