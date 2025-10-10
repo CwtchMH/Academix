@@ -9,16 +9,27 @@ import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { CertificateModule } from './modules/certificates/certificate.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 
 // Import all schemas for seeding
 import { User, UserSchema } from './database/schemas/user.schema';
 import { Course, CourseSchema } from './database/schemas/course.schema';
-import { Enrollment, EnrollmentSchema } from './database/schemas/enrollment.schema';
+import {
+  Enrollment,
+  EnrollmentSchema,
+} from './database/schemas/enrollment.schema';
 import { Question, QuestionSchema } from './database/schemas/question.schema';
 import { Exam, ExamSchema } from './database/schemas/exam.schema';
-import { Submission, SubmissionSchema } from './database/schemas/submission.schema';
-import { Certificate, CertificateSchema } from './database/schemas/certificate.schema';
+import {
+  Submission,
+  SubmissionSchema,
+} from './database/schemas/submission.schema';
+import {
+  Certificate,
+  CertificateSchema,
+} from './database/schemas/certificate.schema';
 
 @Module({
   imports: [
@@ -51,6 +62,7 @@ import { Certificate, CertificateSchema } from './database/schemas/certificate.s
     ]),
     AuthModule,
     HealthModule,
+    CertificateModule,
   ],
   controllers: [AppController],
   providers: [
@@ -58,6 +70,10 @@ import { Certificate, CertificateSchema } from './database/schemas/certificate.s
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })
