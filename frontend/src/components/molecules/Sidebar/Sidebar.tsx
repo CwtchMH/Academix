@@ -1,6 +1,7 @@
 import React from 'react'
 import { Logo, MenuItem, Icon } from '@/components/atoms'
 import type { SidebarProps } from '@/components/molecules/Sidebar/Sidebar.types'
+import { useAuth } from '@/stores/auth'
 
 export const Sidebar: React.FC<SidebarProps> = ({
   className = '',
@@ -8,7 +9,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onItemClick,
   isCollapsed = false
 }) => {
-  const menuItems = [
+  const { user } = useAuth()
+  const menuAllItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -36,12 +38,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   ]
 
+  const menuItems =
+    user?.role === 'teacher'
+      ? menuAllItems
+      : menuAllItems.filter((item) => item.id !== 'students')
+
   return (
     <aside
       className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full ${className}`}
     >
-      <div className="p-6">
-        <Logo className={isCollapsed ? 'w-6 h-6' : 'w-8 h-8'} />
+      <div className="py-6 w-full flex justify-center items-center">
+        <Logo collapsed={isCollapsed} />
       </div>
 
       <nav className="px-4 pb-4">
