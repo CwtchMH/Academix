@@ -1,26 +1,36 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/stores/auth'
 import { Card, Descriptions, Tag, Spin, Button, Space } from 'antd'
 import {
   UserOutlined,
   MailOutlined,
   IdcardOutlined,
-  CalendarOutlined,
-  LogoutOutlined
+  CalendarOutlined
 } from '@ant-design/icons'
-import { clearAuth } from '@/services/utils/auth.utils'
 
 export default function ProfilePage() {
-  const router = useRouter()
   const { user, isLoading } = useAuth()
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card>
+          <Space direction="vertical" size="large" align="center">
+            <span>Không tìm thấy thông tin người dùng.</span>
+            <Button type="primary" href="/login">
+              Đăng nhập lại
+            </Button>
+          </Space>
+        </Card>
       </div>
     )
   }
@@ -104,7 +114,7 @@ export default function ProfilePage() {
                 </Space>
               }
             >
-              {new Date(user!.createdAt).toLocaleString('vi-VN')}
+              {new Date(user.createdAt).toLocaleString('vi-VN')}
             </Descriptions.Item>
 
             <Descriptions.Item
@@ -115,7 +125,7 @@ export default function ProfilePage() {
                 </Space>
               }
             >
-              {new Date(user!.updatedAt).toLocaleString('vi-VN')}
+              {new Date(user.updatedAt).toLocaleString('vi-VN')}
             </Descriptions.Item>
           </Descriptions>
         </Card>
