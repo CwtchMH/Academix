@@ -8,10 +8,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   className = '',
   initialActiveItem = 'dashboard',
-  userAvatar,
   hasNotification = false,
   onNotificationClick,
-  onAvatarClick,
   onSidebarItemClick
 }) => {
   const [activeItem, setActiveItem] = useState(initialActiveItem)
@@ -63,10 +61,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       {/* Sidebar */}
       <div
         className={`
-        ${isSidebarCollapsed ? 'w-16' : 'w-64'} 
+        ${isSidebarCollapsed ? 'w-16' : 'w-60'} 
         transition-all duration-300 ease-in-out
         fixed lg:relative z-30
-        ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-64'}
+        ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-60'}
         ${
           !isSidebarCollapsed
             ? 'translate-x-0'
@@ -85,10 +83,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Navbar */}
         <Navbar
-          userAvatar={userAvatar}
           hasNotification={hasNotification}
           onNotificationClick={onNotificationClick}
-          onAvatarClick={onAvatarClick}
         />
 
         {/* Page Content */}
