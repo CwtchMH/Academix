@@ -1,15 +1,17 @@
 import React from 'react'
 import Image from 'next/image'
 
-export const Logo: React.FC<{ className?: string; collapsed?: boolean }> = ({
-  className = '',
-  collapsed = false
-}) => {
+export const Logo: React.FC<{
+  className?: string
+  collapsed?: boolean
+  onClick?: () => void
+}> = ({ className = '', collapsed = false, onClick }) => {
   return (
     <div
-      className={`flex items-center justify-center ${
+      className={`flex cursor-pointer items-center justify-center ${
         collapsed ? '' : 'space-x-2'
       } ${className}`}
+      onClick={onClick}
     >
       <Image
         src="/academix-logo-white.png"

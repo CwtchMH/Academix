@@ -7,6 +7,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   className = '',
   activeItem = 'dashboard',
   onItemClick,
+  onLogoClick,
   isCollapsed = false
 }) => {
   const { user } = useAuth()
@@ -15,6 +16,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'dashboard',
       label: 'Dashboard',
       icon: <Icon name="dashboard" />
+    },
+    {
+      id: 'courses',
+      label: 'Courses',
+      icon: <Icon name="courses" />
     },
     {
       id: 'exams',
@@ -41,14 +47,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems =
     user?.role === 'teacher'
       ? menuAllItems
-      : menuAllItems.filter((item) => item.id !== 'students')
+      : menuAllItems.filter(
+          (item) => item.id !== 'students' && item.id !== 'courses'
+        )
 
   return (
     <aside
       className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full ${className}`}
     >
       <div className="py-6 w-full flex justify-center items-center">
-        <Logo collapsed={isCollapsed} />
+        <Logo collapsed={isCollapsed} onClick={onLogoClick} />
       </div>
 
       <nav className="px-4 pb-4">

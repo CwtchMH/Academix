@@ -3,12 +3,10 @@ import { NotificationProps } from './Notification.types'
 
 export const Notification: React.FC<NotificationProps> = ({
   className = '',
-  hasNotification = false,
-  onClick
+  hasNotification = false
 }) => {
   return (
     <button
-      onClick={onClick}
       className={`relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${className}`}
       aria-label="Notifications"
     >
@@ -40,4 +38,3 @@ export const Notification: React.FC<NotificationProps> = ({
     </button>
   )
 }
-
