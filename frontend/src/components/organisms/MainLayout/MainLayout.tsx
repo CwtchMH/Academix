@@ -2,22 +2,25 @@
 
 import React, { useState } from 'react'
 import { Navbar, Sidebar } from '@/components/molecules'
+import { useRouter } from 'next/navigation'
 import type { MainLayoutProps } from '@/components/organisms/MainLayout/MainLayout.types'
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   className = '',
   initialActiveItem = 'dashboard',
-  hasNotification = false,
-  onNotificationClick,
-  onSidebarItemClick
+  hasNotification = false
 }) => {
   const [activeItem, setActiveItem] = useState(initialActiveItem)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const router = useRouter()
+
+  const handleLogoClick = () => {
+    router.push('/')
+  }
 
   const handleSidebarItemClick = (itemId: string) => {
     setActiveItem(itemId)
-    onSidebarItemClick?.(itemId)
   }
 
   const toggleSidebar = () => {
@@ -26,7 +29,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   return (
     <div
-      className={`min-h-screen bg-gray-50 dark:bg-gray-900 flex ${className}`}
+      className={`flex h-screen w-full overflow-hidden bg-gray-50 dark:bg-gray-900 ${className}`}
     >
       {/* Mobile Sidebar Toggle Button */}
       <button
@@ -63,7 +66,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         className={`
         ${isSidebarCollapsed ? 'w-16' : 'w-60'} 
         transition-all duration-300 ease-in-out
-        fixed lg:relative z-30
+        fixed lg:relative z-30 h-screen
         ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-60'}
         ${
           !isSidebarCollapsed
@@ -76,19 +79,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           activeItem={activeItem}
           onItemClick={handleSidebarItemClick}
           isCollapsed={isSidebarCollapsed}
+          onLogoClick={handleLogoClick}
         />
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex h-screen flex-1 flex-col min-w-0">
         {/* Navbar */}
-        <Navbar
-          hasNotification={hasNotification}
-          onNotificationClick={onNotificationClick}
-        />
+        <Navbar hasNotification={hasNotification} />
 
         {/* Page Content */}
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
   )

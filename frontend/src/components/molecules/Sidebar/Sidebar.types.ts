@@ -3,5 +3,5 @@ export interface SidebarProps {
   activeItem?: string
   onItemClick?: (itemId: string) => void
   isCollapsed?: boolean
+  onLogoClick?: () => void
 }
-

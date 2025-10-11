@@ -13,13 +13,15 @@ const Button: React.FC<ButtonProps> = ({
   const getVariantClasses = () => {
     switch (variant) {
       case 'primary':
-        return 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600 focus:ring-blue-500'
+        return '!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-600 focus:ring-blue-500'
       case 'secondary':
-        return 'bg-gray-600 hover:bg-gray-700 text-white border-gray-600 focus:ring-gray-500'
+        return '!bg-gray-600 hover:!bg-gray-700 !text-white !border-gray-600 focus:ring-gray-500'
       case 'outline':
-        return 'bg-transparent hover:bg-gray-50 text-gray-700 border-gray-300 focus:ring-gray-500'
+        return '!bg-transparent hover:!bg-gray-50 !text-gray-700 !border-gray-300 focus:ring-gray-500'
+      case 'consensus':
+        return '!bg-green-600 hover:!bg-green-700 !text-white !border-green-600 focus:ring-green-500'
       default:
-        return 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600 focus:ring-blue-500'
+        return '!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-600 focus:ring-blue-500'
     }
   }
 
@@ -46,7 +48,7 @@ const Button: React.FC<ButtonProps> = ({
         ${fullWidth ? 'w-full' : ''}
         rounded-lg font-medium transition-all duration-200
         focus:outline-none focus:ring-2 focus:ring-offset-2
-        disabled:opacity-50 disabled:cursor-not-allowed
+  disabled:opacity-50 disabled:cursor-not-allowed
         ${className}
       `}
       {...props}

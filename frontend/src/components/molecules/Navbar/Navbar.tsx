@@ -6,7 +6,6 @@ import { useAuth } from '@/stores/auth'
 
 export const Navbar: React.FC<NavbarProps> = ({
   className = '',
-  onNotificationClick,
   hasNotification = false
 }) => {
   const { user } = useAuth()
@@ -17,15 +16,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex">
-          <p className="italic text-gray-900 font-bold dark:text-gray-300 underline">
-            Chào mừng <span>{user?.username}</span>
+          <p className="italic text-gray-900 text-xl font-bold dark:text-gray-300 underline">
+            Welcome, <span>{user?.username}</span>
           </p>
         </div>
         <div className="flex items-center space-x-4">
-          <Notification
-            hasNotification={hasNotification}
-            onClick={onNotificationClick}
-          />
+          <Notification hasNotification={hasNotification} />
           <UserDropdown />
         </div>
       </div>
