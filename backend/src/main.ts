@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { GlobalValidationPipe } from './common/pipes/validation.pipe';
+import { ResponseHelper } from './common/dto/response.dto';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,11 +22,27 @@ async function bootstrap() {
   });
 
   // Global prefix
-  app.setGlobalPrefix(configService.get<string>('app.apiPrefix') || 'api/v1');
+  const apiPrefix = configService.get<string>('app.apiPrefix') || 'api/v1';
+  app.setGlobalPrefix(apiPrefix);
 
   // Global pipes and filters
   app.useGlobalPipes(new GlobalValidationPipe());
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Public landing route for root path
+  app.getHttpAdapter().get('/', (_req, res: Response) => {
+    res.json(
+      ResponseHelper.success(
+        {
+          name: 'Academix API',
+          version: '1.0',
+          docs: '/docs',
+          health: `/${apiPrefix}/health`,
+        },
+        'Welcome to the Academix API',
+      ),
+    );
+  });
 
   // Swagger documentation
   const config = new DocumentBuilder()
