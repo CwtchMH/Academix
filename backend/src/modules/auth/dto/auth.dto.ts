@@ -38,3 +38,13 @@ export class RegisterDto {
   @IsEnum(['student', 'teacher', 'admin'])
   role: 'student' | 'teacher' | 'admin';
 }
+
+export class RefreshTokenDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'Refresh token issued during login',
+  })
+  @IsString()
+  @MinLength(10)
+  refreshToken: string;
+}

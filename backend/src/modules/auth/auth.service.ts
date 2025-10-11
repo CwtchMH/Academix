@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as argon2 from 'argon2';
 import { User, UserDocument } from '../../database/schemas/user.schema';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, RefreshTokenDto } from './dto/auth.dto';
 import { IJwtPayload, IUserProfile } from '../../common/interfaces';
 
 @Injectable()
@@ -48,6 +48,7 @@ export class AuthService {
 
     // Generate tokens
     const tokens = await this.generateTokens(savedUser);
+    await this.updateRefreshToken(String(savedUser._id), tokens.refreshToken);
 
     return {
       user: this.sanitizeUser(savedUser),
@@ -75,9 +76,45 @@ export class AuthService {
 
     // Generate tokens
     const tokens = await this.generateTokens(user);
+    await this.updateRefreshToken(String(user._id), tokens.refreshToken);
 
     return {
       user: this.sanitizeUser(user),
+      ...tokens,
+    };
+  }
+
+  async refreshTokens(refreshTokenDto: RefreshTokenDto) {
+    const { refreshToken } = refreshTokenDto;
+
+    let payload: IJwtPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<IJwtPayload>(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.userModel
+      .findById(payload.sub)
+      .select('+refreshTokenHash');
+
+    if (!user || !user.refreshTokenHash) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const isRefreshTokenValid = await argon2.verify(
+      user.refreshTokenHash,
+      refreshToken,
+    );
+
+    if (!isRefreshTokenValid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const tokens = await this.generateTokens(user);
+    await this.updateRefreshToken(String(user._id), tokens.refreshToken);
+
+    return {
       ...tokens,
     };
   }
@@ -110,6 +147,16 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  private async updateRefreshToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<void> {
+    const refreshTokenHash = await argon2.hash(refreshToken);
+    await this.userModel.findByIdAndUpdate(userId, {
+      refreshTokenHash,
+    });
   }
 
   private sanitizeUser(user: UserDocument): IUserProfile {

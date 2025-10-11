@@ -7,6 +7,7 @@ export interface IUser {
   dateOfBirth?: Date;
   role: 'student' | 'teacher' | 'admin';
   walletAddress?: string;
+  refreshTokenHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }

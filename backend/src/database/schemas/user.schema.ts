@@ -31,6 +31,9 @@ export class User {
   @Prop({ unique: true, sparse: true })
   walletAddress?: string;
 
+  @Prop({ select: false })
+  refreshTokenHash?: string;
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 
