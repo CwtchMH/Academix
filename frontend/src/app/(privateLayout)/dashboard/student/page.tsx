@@ -1,7 +1,8 @@
-export default function StudentDashboardPage() {
-  return (
-    <div>
-      <h1>Student Dashboard</h1>
-    </div>
-  )
-}
+// src/components/templates/StudentDashboard.tsx
+import React from 'react';
+
+const StudentDashboard = () => {
+  return <div>Welcome. This is the Student Dashboard.</div>;
+};
+
+export default StudentDashboard;

@@ -1,3 +1,4 @@
+// src/components/organisms/MainLayout/MainLayout.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -8,10 +9,8 @@ import type { MainLayoutProps } from "@/components/organisms/MainLayout/MainLayo
 export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   className = "",
-  initialActiveItem = "dashboard",
   hasNotification = false,
 }) => {
-  const [activeItem, setActiveItem] = useState(initialActiveItem);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const router = useRouter();
 
@@ -19,19 +18,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     router.push("/");
   };
 
-  const handleSidebarItemClick = (itemId: string) => {
-    setActiveItem(itemId);
-  };
-
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   return (
-    <div
-      className={`flex h-screen w-full overflow-hidden bg-gray-50 ${className}`}
-    >
-      {/* Mobile Sidebar Toggle Button */}
+    <div className={`flex h-screen w-full overflow-hidden bg-gray-50 ${className}`}>
+      {/* ... Mobile Sidebar Toggle & Overlay ... */}
       <button
         onClick={toggleSidebar}
         className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
@@ -76,8 +69,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       `}
       >
         <Sidebar
-          activeItem={activeItem}
-          onItemClick={handleSidebarItemClick}
           isCollapsed={isSidebarCollapsed}
           onLogoClick={handleLogoClick}
         />
@@ -85,10 +76,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
       {/* Main Content Area */}
       <div className="flex h-screen flex-1 flex-col min-w-0">
-        {/* Navbar */}
         <Navbar hasNotification={hasNotification} />
-
-        {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
