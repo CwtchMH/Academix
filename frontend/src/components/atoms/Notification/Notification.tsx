@@ -1,13 +1,13 @@
-import React from 'react'
-import { NotificationProps } from './Notification.types'
+import React from "react";
+import { NotificationProps } from "./Notification.types";
 
 export const Notification: React.FC<NotificationProps> = ({
-  className = '',
-  hasNotification = false
+  className = "",
+  hasNotification = false,
 }) => {
   return (
     <button
-      className={`relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${className}`}
+      className={`relative p-2 rounded-lg hover:bg-gray-100 transition-colors ${className}`}
       aria-label="Notifications"
     >
       <svg
@@ -15,7 +15,7 @@ export const Notification: React.FC<NotificationProps> = ({
         height="20"
         viewBox="0 0 24 24"
         fill="none"
-        className="text-gray-600 dark:text-gray-300"
+        className="text-gray-600"
       >
         <path
           d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
@@ -36,5 +36,5 @@ export const Notification: React.FC<NotificationProps> = ({
         <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
       )}
     </button>
-  )
-}
+  );
+};

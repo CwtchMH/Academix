@@ -1,58 +1,56 @@
-import React from 'react'
-import { Logo, MenuItem, Icon } from '@/components/atoms'
-import type { SidebarProps } from '@/components/molecules/Sidebar/Sidebar.types'
-import { useAuth } from '@/stores/auth'
+import React from "react";
+import { Logo, MenuItem, Icon } from "@/components/atoms";
+import type { SidebarProps } from "@/components/molecules/Sidebar/Sidebar.types";
+import { useAuth } from "@/stores/auth";
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  className = '',
-  activeItem = 'dashboard',
+  className = "",
+  activeItem = "dashboard",
   onItemClick,
   onLogoClick,
-  isCollapsed = false
+  isCollapsed = false,
 }) => {
-  const { user } = useAuth()
+  const { user } = useAuth();
   const menuAllItems = [
     {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <Icon name="dashboard" />
+      id: "dashboard",
+      label: "Dashboard",
+      icon: <Icon name="dashboard" />,
     },
     {
-      id: 'courses',
-      label: 'Courses',
-      icon: <Icon name="courses" />
+      id: "courses",
+      label: "Courses",
+      icon: <Icon name="courses" />,
     },
     {
-      id: 'exams',
-      label: 'Exams',
-      icon: <Icon name="exams" />
+      id: "exams",
+      label: "Exams",
+      icon: <Icon name="exams" />,
     },
     {
-      id: 'students',
-      label: 'Students',
-      icon: <Icon name="students" />
+      id: "students",
+      label: "Students",
+      icon: <Icon name="students" />,
     },
     {
-      id: 'results',
-      label: 'Results',
-      icon: <Icon name="results" />
+      id: "results",
+      label: "Results",
+      icon: <Icon name="results" />,
     },
     {
-      id: 'certificates',
-      label: 'Certificates',
-      icon: <Icon name="certificates" />
-    }
-  ]
+      id: "certificates",
+      label: "Certificates",
+      icon: <Icon name="certificates" />,
+    },
+  ];
 
   const menuItems =
-    user?.role === 'teacher'
+    user?.role === "teacher"
       ? menuAllItems
-      : menuAllItems.filter((item) => item.id !== 'students')
+      : menuAllItems.filter((item) => item.id !== "students");
 
   return (
-    <aside
-      className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full ${className}`}
-    >
+    <aside className={`bg-white border-r border-gray-200 h-full ${className}`}>
       <div className="py-6 w-full flex justify-center items-center">
         <Logo collapsed={isCollapsed} onClick={onLogoClick} />
       </div>
@@ -63,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <MenuItem
               key={item.id}
               icon={item.icon}
-              label={isCollapsed ? '' : item.label}
+              label={isCollapsed ? "" : item.label}
               isActive={activeItem === item.id}
               onClick={() => onItemClick?.(item.id)}
             />
@@ -71,5 +69,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
     </aside>
-  )
-}
+  );
+};

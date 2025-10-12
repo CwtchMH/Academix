@@ -1,24 +1,26 @@
-import { create } from 'zustand'
-import { getProfile } from '@/services/api/user.api'
+import { create } from "zustand";
+import { getProfile } from "@/services/api/user.api";
 
 export interface User {
-  id: string
-  username: string
-  email: string
-  role: 'student' | 'teacher'
-  createdAt: string
-  updatedAt: string
+  fullName?: string;
+  id: string;
+  username: string;
+  email: string;
+  dateOfBirth?: string;
+  role: "student" | "teacher";
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthState {
-  user: User | null
-  isLoading: boolean
-  error: string | null
-  setUser: (user: User | null) => void
-  setLoading: (isLoading: boolean) => void
-  setError: (error: string | null) => void
-  clearUser: () => void
-  getUser: () => Promise<void>
+  user: User | null;
+  isLoading: boolean;
+  error: string | null;
+  setUser: (user: User | null) => void;
+  setLoading: (isLoading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearUser: () => void;
+  getUser: () => Promise<void>;
 }
 
 export const useAuth = create<AuthState>((set) => ({
@@ -34,24 +36,24 @@ export const useAuth = create<AuthState>((set) => ({
   // Gọi API để lấy user info
   getUser: async () => {
     try {
-      set({ isLoading: true, error: null })
+      set({ isLoading: true, error: null });
 
-      const data = await getProfile()
+      const data = await getProfile();
 
       if (data.success) {
-        set({ user: data.data.user, isLoading: false })
+        set({ user: data.data.user, isLoading: false });
       } else {
-        set({ error: data.message, isLoading: false })
+        set({ error: data.message, isLoading: false });
       }
     } catch (error: any) {
-      console.error('Get user error:', error)
+      console.error("Get user error:", error);
 
       // Token invalid → clear user
       if (error.response?.status === 401) {
-        set({ user: null, error: null, isLoading: false })
+        set({ user: null, error: null, isLoading: false });
       } else {
-        set({ error: 'Failed to get user', isLoading: false })
+        set({ error: "Failed to get user", isLoading: false });
       }
     }
-  }
-}))
+  },
+}));

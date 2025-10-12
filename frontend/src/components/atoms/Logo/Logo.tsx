@@ -1,15 +1,15 @@
-import React from 'react'
-import Image from 'next/image'
+import React from "react";
+import Image from "next/image";
 
 export const Logo: React.FC<{
-  className?: string
-  collapsed?: boolean
-  onClick?: () => void
-}> = ({ className = '', collapsed = false, onClick }) => {
+  className?: string;
+  collapsed?: boolean;
+  onClick?: () => void;
+}> = ({ className = "", collapsed = false, onClick }) => {
   return (
     <div
       className={`flex cursor-pointer items-center justify-center ${
-        collapsed ? '' : 'space-x-2'
+        collapsed ? "" : "space-x-2"
       } ${className}`}
       onClick={onClick}
     >
@@ -22,10 +22,8 @@ export const Logo: React.FC<{
         priority
       />
       {!collapsed && (
-        <span className="text-2xl font-semibold text-gray-800 dark:text-white">
-          Academix
-        </span>
+        <span className="text-2xl font-semibold text-gray-800">Academix</span>
       )}
     </div>
-  )
-}
+  );
+};

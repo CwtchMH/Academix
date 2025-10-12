@@ -1,47 +1,47 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import { Navbar, Sidebar } from '@/components/molecules'
-import { useRouter } from 'next/navigation'
-import type { MainLayoutProps } from '@/components/organisms/MainLayout/MainLayout.types'
+import React, { useState } from "react";
+import { Navbar, Sidebar } from "@/components/molecules";
+import { useRouter } from "next/navigation";
+import type { MainLayoutProps } from "@/components/organisms/MainLayout/MainLayout.types";
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
-  className = '',
-  initialActiveItem = 'dashboard',
-  hasNotification = false
+  className = "",
+  initialActiveItem = "dashboard",
+  hasNotification = false,
 }) => {
-  const [activeItem, setActiveItem] = useState(initialActiveItem)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const router = useRouter()
+  const [activeItem, setActiveItem] = useState(initialActiveItem);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const router = useRouter();
 
   const handleLogoClick = () => {
-    router.push('/')
-  }
+    router.push("/");
+  };
 
   const handleSidebarItemClick = (itemId: string) => {
-    setActiveItem(itemId)
-  }
+    setActiveItem(itemId);
+  };
 
   const toggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed)
-  }
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   return (
     <div
-      className={`flex h-screen w-full overflow-hidden bg-gray-50 dark:bg-gray-900 ${className}`}
+      className={`flex h-screen w-full overflow-hidden bg-gray-50 ${className}`}
     >
       {/* Mobile Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
       >
         <svg
           width="20"
           height="20"
           viewBox="0 0 24 24"
           fill="none"
-          className="text-gray-600 dark:text-gray-300"
+          className="text-gray-600"
         >
           <path
             d="M3 12h18M3 6h18M3 18h18"
@@ -64,14 +64,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       {/* Sidebar */}
       <div
         className={`
-        ${isSidebarCollapsed ? 'w-16' : 'w-60'} 
+        ${isSidebarCollapsed ? "w-16" : "w-60"} 
         transition-all duration-300 ease-in-out
         fixed lg:relative z-30 h-screen
-        ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-60'}
+        ${isSidebarCollapsed ? "lg:w-16" : "lg:w-60"}
         ${
           !isSidebarCollapsed
-            ? 'translate-x-0'
-            : '-translate-x-full lg:translate-x-0'
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
         }
       `}
       >
@@ -92,5 +92,5 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
-  )
-}
+  );
+};
