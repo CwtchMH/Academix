@@ -1,5 +1,5 @@
-import { AuthService } from '../index'
-import type { LoginResponse, RegisterResponse } from '../types'
+import { AuthService } from "../index";
+import type { LoginResponse, RegisterResponse } from "../types";
 
 // ==================== AUTH API ENDPOINTS ====================
 
@@ -13,9 +13,9 @@ import type { LoginResponse, RegisterResponse } from '../types'
  */
 export const useLoginApi = () => {
   return AuthService.usePost<LoginResponse>({
-    url: '/login'
-  })
-}
+    url: "/login",
+  });
+};
 
 /**
  * Register API
@@ -27,9 +27,9 @@ export const useLoginApi = () => {
  */
 export const useRegisterApi = () => {
   return AuthService.usePost<RegisterResponse>({
-    url: '/register'
-  })
-}
+    url: "/register",
+  });
+};
 
 /**
  * Logout API (optional - nếu backend có endpoint)
@@ -37,16 +37,30 @@ export const useRegisterApi = () => {
  */
 export const useLogoutApi = () => {
   return AuthService.usePost<{ success: boolean }>({
-    url: '/logout'
-  })
+    url: "/logout",
+  });
+};
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
 }
 
 /**
- * Refresh Token API (optional - nếu cần)
- * POST /auth/refresh
+ * Change Password API
+ * PUT /auth/change-password
  */
-export const useRefreshTokenApi = () => {
-  return AuthService.usePost<LoginResponse>({
-    url: '/refresh'
-  })
-}
+export const changePassword = async (
+  data: ChangePasswordRequest
+): Promise<ChangePasswordResponse> => {
+  const response = await AuthService.apiMethod.put<ChangePasswordResponse>({
+    url: "/change-password",
+    data,
+  });
+  return response;
+};

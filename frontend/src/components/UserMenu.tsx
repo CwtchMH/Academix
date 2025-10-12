@@ -1,55 +1,55 @@
-'use client'
+"use client";
 
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/stores/auth'
-import { Avatar, Dropdown, Space, Tag } from 'antd'
-import type { MenuProps } from 'antd'
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/stores/auth";
+import { Avatar, Dropdown, Space, Tag } from "antd";
+import type { MenuProps } from "antd";
 import {
   UserOutlined,
   LogoutOutlined,
   SettingOutlined,
-  IdcardOutlined
-} from '@ant-design/icons'
-import { clearAuth } from '@/services/utils/auth.utils'
+  IdcardOutlined,
+} from "@ant-design/icons";
+import { clearAuth } from "@/services/utils/auth.utils";
 
 export function UserMenu() {
-  const router = useRouter()
-  const { user, clearUser } = useAuth()
+  const router = useRouter();
+  const { user, clearUser } = useAuth();
 
   if (!user) {
-    return null
+    return null;
   }
 
   const handleLogout = () => {
-    clearAuth()
-    clearUser()
-    router.push('/login')
-  }
+    clearAuth();
+    clearUser();
+    router.push("/login");
+  };
 
-  const items: MenuProps['items'] = [
+  const items: MenuProps["items"] = [
     {
-      key: 'profile',
-      label: 'Thông tin cá nhân',
+      key: "profile",
+      label: "Student Profile",
       icon: <UserOutlined />,
-      onClick: () => router.push('/profile')
+      onClick: () => router.push("/profile"),
     },
     {
-      key: 'settings',
-      label: 'Cài đặt',
+      key: "settings",
+      label: "Settings",
       icon: <SettingOutlined />,
-      onClick: () => router.push('/settings')
+      onClick: () => router.push("/settings"),
     },
     {
-      type: 'divider'
+      type: "divider",
     },
     {
-      key: 'logout',
-      label: 'Đăng xuất',
+      key: "logout",
+      label: "Logout",
       icon: <LogoutOutlined />,
       danger: true,
-      onClick: handleLogout
-    }
-  ]
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     <Dropdown menu={{ items }} placement="bottomRight" arrow>
@@ -58,13 +58,13 @@ export function UserMenu() {
         <div className="hidden md:block">
           <div className="text-sm font-medium">{user.username}</div>
           <Tag
-            color={user.role === 'teacher' ? 'blue' : 'green'}
+            color={user.role === "teacher" ? "blue" : "green"}
             className="text-xs"
           >
-            {user.role === 'teacher' ? 'Giáo viên' : 'Sinh viên'}
+            {user.role === "teacher" ? "Giáo viên" : "Sinh viên"}
           </Tag>
         </div>
       </Space>
     </Dropdown>
-  )
+  );
 }
