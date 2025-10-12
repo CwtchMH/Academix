@@ -2,11 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { type AxiosRequestConfig } from 'axios'
 import {
-  DefinedInitialDataInfiniteOptions,
-  InfiniteData,
-  UndefinedInitialDataInfiniteOptions,
-  useInfiniteQuery,
-  type UseInfiniteQueryOptions,
   useMutation,
   type UseMutationOptions,
   useQuery,
@@ -23,11 +18,6 @@ export type ApiMutationOptionsOf<T> = Omit<
   UseMutationOptions<T, unknown, { data: Record<string, unknown> }, unknown>,
   'mutationFn'
 >
-
-// enum API_SERVICES {
-//   TEST_SERVICE = "test",
-//   AUTH_SERVICE = "auth",
-// }
 
 const getApiEndpoint = (service: API_SERVICES): string => {
   return `${process.env.NEXT_PUBLIC_API_ENDPOINT}/${service}`
@@ -216,10 +206,14 @@ export class ApiService {
 // Export API endpoints
 export const TEST_SERVICE_ENDPOINT = getApiEndpoint(API_SERVICES.TEST_SERVICE)
 export const USER_SERVICE_ENDPOINT = getApiEndpoint(API_SERVICES.AUTH_SERVICE)
+export const COURSE_SERVICE_ENDPOINT = getApiEndpoint(
+  API_SERVICES.COURSE_SERVICE
+)
 
 // Export API service methods
 export const TestService = new ApiService(TEST_SERVICE_ENDPOINT)
 export const AuthService = new ApiService(USER_SERVICE_ENDPOINT)
+export const CourseService = new ApiService(COURSE_SERVICE_ENDPOINT)
 
 // Export organized services
 export * from './api'

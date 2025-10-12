@@ -1,94 +1,75 @@
 import React from 'react'
-import { Badge, Button, Icon } from '@/components/atoms'
-import type { BadgeVariant } from '@/components/atoms'
-import type { CourseCardProps, CourseStatus } from './CourseCard.types'
-
-const statusVariantMap: Record<CourseStatus, BadgeVariant> = {
-  Active: 'active',
-  Upcoming: 'scheduled',
-  Completed: 'completed'
-}
+import { message } from 'antd'
+import { Button, Icon } from '@/components/atoms'
+import type { CourseCardProps } from './CourseCard.types'
 
 export const CourseCard: React.FC<CourseCardProps> = ({
-  title,
-  code,
-  status,
-  category,
-  startDate,
-  endDate,
-  studentCount,
-  instructor,
-  onManage,
-  onViewDetails
+  courseName,
+  courseId,
+  teacherName,
+  teacherId,
+  enrollmentCount
 }) => {
+  const handleCopyCourseId = () => {
+    if (!courseId) return
+
+    if (!navigator?.clipboard) {
+      message.error('Clipboard access is not available in this browser.')
+      return
+    }
+
+    navigator.clipboard
+      .writeText(courseId)
+      .then(() => message.success('Course ID copied to clipboard'))
+      .catch(() => message.error('Failed to copy course ID'))
+  }
+
   return (
-    <article className="flex h-full flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
-      <div className="space-y-4">
-        <header className="flex items-start justify-between gap-3">
+    <article className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+      <header className="space-y-2">
+        <h3 className="text-lg font-semibold text-slate-900">{courseName}</h3>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="truncate text-sm text-slate-500">
+            Course ID:{' '}
+            <span className="font-mono text-slate-600">{courseId}</span>
+          </p>
+          <Button
+            variant="outline"
+            size="small"
+            className="sm:w-auto"
+            onClick={handleCopyCourseId}
+          >
+            Copy ID
+          </Button>
+        </div>
+      </header>
+
+      <dl className="space-y-2 text-sm text-slate-600">
+        <div className="flex items-start gap-2">
+          <Icon
+            name="dashboard"
+            size="small"
+            className="mt-0.5 text-blue-500"
+          />
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-            <p className="text-sm text-slate-500">{code}</p>
+            <dt className="font-medium text-slate-500">Teacher Name</dt>
+            <dd className="text-slate-700">{teacherName}</dd>
+            <p className="text-xs text-slate-500">ID: {teacherId}</p>
           </div>
-          <Badge label={status} variant={statusVariantMap[status]} />
-        </header>
-
-        <div className="flex flex-wrap gap-4 text-sm text-slate-600">
-          <span className="inline-flex items-center gap-2">
-            <Icon name="courses" size="small" className="text-blue-500" />
-            {category}
-          </span>
-          {instructor ? (
-            <span className="inline-flex items-center gap-2">
-              <Icon name="students" size="small" className="text-emerald-500" />
-              {instructor}
-            </span>
-          ) : null}
-          {typeof studentCount === 'number' ? (
-            <span className="inline-flex items-center gap-2">
-              <Icon name="students" size="small" className="text-violet-500" />
-              {studentCount} enrolled
-            </span>
-          ) : null}
         </div>
 
-        <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-          <div className="flex items-center gap-2">
-            <Icon name="results" size="small" className="text-slate-400" />
-            <span className="font-medium text-slate-700">Start:</span>
-            <span>{startDate}</span>
+        <div className="flex items-start gap-2">
+          <Icon
+            name="students"
+            size="small"
+            className="mt-0.5 text-emerald-500"
+          />
+          <div>
+            <dt className="font-medium text-slate-500">Enrollment Count</dt>
+            <dd className="text-slate-700">{enrollmentCount}</dd>
           </div>
-          {endDate ? (
-            <div className="flex items-center gap-2">
-              <Icon
-                name="certificates"
-                size="small"
-                className="text-slate-400"
-              />
-              <span className="font-medium text-slate-700">End:</span>
-              <span>{endDate}</span>
-            </div>
-          ) : null}
         </div>
-      </div>
-
-      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-        <Button
-          variant="outline"
-          size="small"
-          className="sm:w-auto"
-          onClick={onViewDetails}
-        >
-          View Details
-        </Button>
-        <Button
-          variant="primary"
-          size="small"
-          className="sm:w-auto"
-          onClick={onManage}
-        >
-          Manage Course
-        </Button>
-      </div>
+      </dl>
     </article>
   )
 }

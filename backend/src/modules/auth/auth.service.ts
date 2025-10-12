@@ -19,7 +19,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { username, email, password, role } = registerDto;
+    const { username, fullName, email, password, role } = registerDto;
 
     // Check if username already exists
     const existingUsername = await this.userModel.findOne({ username });
@@ -39,6 +39,7 @@ export class AuthService {
     // Create user with role from request
     const newUser = new this.userModel({
       username,
+      fullName,
       email,
       passwordHash,
       role,

@@ -226,3 +226,39 @@ export class EnrollStudentDto {
   @IsMongoId()
   studentId: string;
 }
+
+export class CreateBasicCourseDto {
+  @ApiProperty({ description: 'Name of the course' })
+  @IsString()
+  @IsNotEmpty()
+  courseName: string;
+
+  @ApiProperty({
+    description: 'Teacher ID (must belong to a user with teacher role)',
+  })
+  @IsMongoId()
+  teacherId: string;
+}
+
+export class CourseBasicResponseDto {
+  @ApiProperty({ description: 'Course ID' })
+  id: string;
+
+  @ApiProperty({ description: 'Name of the course' })
+  courseName: string;
+
+  @ApiProperty({ description: 'Teacher ID associated with the course' })
+  teacherId: string;
+
+  @ApiPropertyOptional({ description: 'Teacher name' })
+  teacherName?: string;
+
+  @ApiProperty({ description: 'Number of enrollments for the course' })
+  enrollmentCount: number;
+
+  @ApiProperty({ description: 'Creation timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  updatedAt: Date;
+}

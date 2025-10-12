@@ -19,5 +19,5 @@ export interface CreateCourseModalProps {
   levelOptions: SelectOption[]
   initialValues?: Partial<CreateCourseFormValues>
   onClose: () => void
-  onSubmit: (values: CreateCourseFormValues) => void
+  onSubmit: (values: CreateCourseFormValues) => void | Promise<void>
 }
