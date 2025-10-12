@@ -14,8 +14,8 @@ export class User {
   @Prop({ required: true })
   passwordHash: string;
 
-  @Prop()
-  fullName?: string;
+  @Prop({ required: true, trim: true })
+  fullName: string;
 
   @Prop({ type: Date })
   dateOfBirth?: Date;

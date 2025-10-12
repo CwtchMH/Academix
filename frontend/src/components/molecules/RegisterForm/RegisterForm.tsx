@@ -25,23 +25,43 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       initialValues={{ agreeToTerms: false }}
     >
       <Form.Item
+        name="fullName"
+        rules={[
+          {
+            required: true,
+            message: 'Please enter your full name'
+          },
+          {
+            min: 2,
+            message: 'Full name must be at least 2 characters'
+          },
+          {
+            whitespace: true,
+            message: 'Full name cannot consist only of whitespace'
+          }
+        ]}
+      >
+        <Input id="fullName" placeholder="Full name" type="text" />
+      </Form.Item>
+
+      <Form.Item
         name="username"
         rules={[
           {
             required: true,
-            message: 'Vui lòng nhập tên đăng nhập'
+            message: 'Please enter your username'
           },
           {
             min: 2,
-            message: 'Tên đăng nhập phải có ít nhất 2 ký tự'
+            message: 'Username must be at least 2 characters'
           },
           {
             whitespace: true,
-            message: 'Tên đăng nhập không được chỉ chứa khoảng trắng'
+            message: 'Username cannot consist only of whitespace'
           }
         ]}
       >
-        <Input id="username" placeholder="Tên đăng nhập" type="text" />
+        <Input id="username" placeholder="Username" type="text" />
       </Form.Item>
 
       <Form.Item
@@ -49,11 +69,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         rules={[
           {
             required: true,
-            message: 'Vui lòng nhập email'
+            message: 'Please enter your email'
           },
           {
             type: 'email',
-            message: 'Email không hợp lệ'
+            message: 'Invalid email address'
           }
         ]}
       >
@@ -65,16 +85,16 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         rules={[
           {
             required: true,
-            message: 'Vui lòng chọn vai trò'
+            message: 'Please select a role'
           }
         ]}
       >
         <Select
-          placeholder="Chọn vai trò"
+          placeholder="Select a role"
           size="large"
           options={[
-            { label: 'Học sinh / Sinh viên', value: 'student' },
-            { label: 'Giáo viên', value: 'teacher' }
+            { label: 'Student', value: 'student' },
+            { label: 'Teacher', value: 'teacher' }
           ]}
         />
       </Form.Item>
@@ -84,19 +104,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         rules={[
           {
             required: true,
-            message: 'Vui lòng nhập mật khẩu'
+            message: 'Please enter your password'
           },
           {
             min: 6,
-            message: 'Mật khẩu phải có ít nhất 6 ký tự'
+            message: 'Password must be at least 6 characters'
           },
           {
             pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-            message: 'Mật khẩu phải chứa chữ hoa, chữ thường và số'
+            message: 'Password must include uppercase, lowercase, and a number'
           }
         ]}
       >
-        <Input id="password" placeholder="Mật khẩu" type="password" />
+        <Input id="password" placeholder="Password" type="password" />
       </Form.Item>
 
       <Form.Item
@@ -105,21 +125,21 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         rules={[
           {
             required: true,
-            message: 'Vui lòng xác nhận mật khẩu'
+            message: 'Please confirm your password'
           },
           ({ getFieldValue }) => ({
             validator(_, value) {
               if (!value || getFieldValue('password') === value) {
                 return Promise.resolve()
               }
-              return Promise.reject(new Error('Mật khẩu không khớp'))
+              return Promise.reject(new Error('Passwords do not match'))
             }
           })
         ]}
       >
         <Input
           id="confirmPassword"
-          placeholder="Xác nhận mật khẩu"
+          placeholder="Confirm password"
           type="password"
         />
       </Form.Item>
@@ -133,7 +153,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
               value
                 ? Promise.resolve()
                 : Promise.reject(
-                    new Error('Bạn phải đồng ý với điều khoản và điều kiện')
+                    new Error('You must agree to the terms and conditions')
                   )
           }
         ]}
@@ -142,9 +162,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           id="agreeToTerms"
           label={
             <span>
-              Tôi đồng ý với{' '}
+              I agree to the{' '}
               <Link href="/terms" className="text-blue-600 hover:text-blue-800">
-                Điều khoản & Điều kiện
+                Terms & Conditions
               </Link>
             </span>
           }
@@ -165,7 +185,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           fullWidth
           loading={loading}
         >
-          Tạo tài khoản
+          Create Account
         </Button>
       </Form.Item>
     </Form>

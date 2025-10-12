@@ -1,162 +1,120 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { message } from 'antd'
-import {
-  Button,
-  Icon,
-  Input,
-  Select,
-  type SelectOption
-} from '@/components/atoms'
-import { CourseCard, type CourseStatus } from '@/components/molecules'
+import React, { useEffect, useMemo, useState } from 'react'
+import { message, Modal } from 'antd'
+import { Button, Icon, Input } from '@/components/atoms'
+import { CourseCard } from '@/components/molecules'
 import {
   CreateCourseModal,
   type CreateCourseFormValues
 } from '@/components/organisms'
-
-interface CourseListItem {
-  id: string
-  title: string
-  code: string
-  status: CourseStatus
-  category: string
-  categoryValue: string
-  startDate: string
-  endDate?: string
-  studentCount?: number
-  instructor?: string
-}
-
-const statusFilterOptions: SelectOption[] = [
-  { label: 'Status: All', value: 'all' },
-  { label: 'Active', value: 'active' },
-  { label: 'Upcoming', value: 'upcoming' },
-  { label: 'Completed', value: 'completed' }
-]
-
-const courseCategoryOptions: SelectOption[] = [
-  { label: 'All Categories', value: 'all' },
-  { label: 'Computer Science', value: 'computer-science' },
-  { label: 'Data & Analytics', value: 'data-analytics' },
-  { label: 'Business & Management', value: 'business-management' },
-  { label: 'Design & Creativity', value: 'design-creativity' }
-]
-
-const courseLevelOptions: SelectOption[] = [
-  { label: 'Beginner', value: 'beginner' },
-  { label: 'Intermediate', value: 'intermediate' },
-  { label: 'Advanced', value: 'advanced' }
-]
-
-const initialCourses: CourseListItem[] = [
-  {
-    id: 'course-1',
-    title: 'Fundamentals of Web Development',
-    code: 'WEB101',
-    status: 'Active',
-    category: 'Computer Science',
-    categoryValue: 'computer-science',
-    startDate: 'Sep 5, 2024 09:00',
-    endDate: 'Dec 15, 2024 17:00',
-    studentCount: 184,
-    instructor: 'Alex Johnson'
-  },
-  {
-    id: 'course-2',
-    title: 'Data Storytelling with Tableau',
-    code: 'DATA204',
-    status: 'Upcoming',
-    category: 'Data & Analytics',
-    categoryValue: 'data-analytics',
-    startDate: 'Nov 12, 2024 14:00',
-    endDate: 'Jan 30, 2025 16:00',
-    studentCount: 96,
-    instructor: 'Morgan Lee'
-  },
-  {
-    id: 'course-3',
-    title: 'Leading High-Performing Teams',
-    code: 'BUS320',
-    status: 'Completed',
-    category: 'Business & Management',
-    categoryValue: 'business-management',
-    startDate: 'Jan 10, 2024 10:00',
-    endDate: 'Apr 20, 2024 15:00',
-    studentCount: 142,
-    instructor: 'Priya Patel'
-  }
-]
+import { useCreateCourse, useTeacherCourses } from '@/services/api/course.api'
+import { useAuth } from '@/stores/auth'
 
 const CoursesPage: React.FC = () => {
-  const [courses, setCourses] = useState<CourseListItem[]>(initialCourses)
+  const { user, getUser } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [createdCourseInfo, setCreatedCourseInfo] = useState<{
+    id: string
+    name: string
+  } | null>(null)
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
+
+  const createCourseMutation = useCreateCourse()
+
+  useEffect(() => {
+    if (!user?.id) {
+      void getUser()
+    }
+  }, [user?.id, getUser])
+
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useTeacherCourses(user?.id, {
+      enabled: Boolean(user?.id),
+      refetchOnWindowFocus: false
+    })
+
+  const courses = data?.data.courses ?? []
+  const responseMessage = data?.message
 
   const filteredCourses = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
-    const normalizedStatus = statusFilter === 'all' ? undefined : statusFilter
-    const normalizedCategory =
-      categoryFilter === 'all' ? undefined : categoryFilter
-
+    if (!normalizedSearch) return courses
     return courses.filter((course) => {
-      const matchesSearch = normalizedSearch
-        ? course.title.toLowerCase().includes(normalizedSearch) ||
-          course.code.toLowerCase().includes(normalizedSearch)
-        : true
-
-      const matchesStatus = normalizedStatus
-        ? course.status.toLowerCase() === normalizedStatus
-        : true
-
-      const matchesCategory = normalizedCategory
-        ? course.categoryValue === normalizedCategory
-        : true
-
-      return matchesSearch && matchesStatus && matchesCategory
+      const courseName = course.courseName?.toLowerCase() ?? ''
+      const courseId = course.id?.toLowerCase() ?? ''
+      return (
+        courseName.includes(normalizedSearch) ||
+        courseId.includes(normalizedSearch)
+      )
     })
-  }, [courses, searchTerm, statusFilter, categoryFilter])
+  }, [courses, searchTerm])
+
+  const handleOpenModal = () => setIsModalOpen(true)
+  const handleCloseModal = () => setIsModalOpen(false)
+
+  const handleSuccessModalClose = () => {
+    setIsSuccessModalOpen(false)
+    setCreatedCourseInfo(null)
+  }
+
+  const handleCopyCourseId = () => {
+    if (!createdCourseInfo?.id) return
+
+    if (!navigator?.clipboard) {
+      message.error('Clipboard access is not available in this browser.')
+      return
+    }
+
+    navigator.clipboard
+      .writeText(createdCourseInfo.id)
+      .then(() => message.success('Course ID copied to clipboard'))
+      .catch(() => message.error('Failed to copy course ID'))
+  }
 
   const handleCreateCourseSubmit = async (
     values: CreateCourseFormValues
   ): Promise<void> => {
     setIsSubmitting(true)
-    try {
-      // TODO: replace with API integration once the backend is available
-      const categoryLabel = courseCategoryOptions.find(
-        (option) => option.value === values.category
-      )?.label
 
-      const newCourse: CourseListItem = {
-        id: `course-${Date.now()}`,
-        title: values.title,
-        code: values.code,
-        status: 'Upcoming',
-        category: categoryLabel ?? 'General',
-        categoryValue: values.category ?? 'general',
-        startDate: values.startDate
-          ? values.startDate.format('MMM D, YYYY HH:mm')
-          : 'Not scheduled',
-        endDate: values.endDate
-          ? values.endDate.format('MMM D, YYYY HH:mm')
-          : undefined,
-        studentCount: 0,
-        instructor: values.instructor
+    try {
+      let teacherId = user?.id
+
+      if (!teacherId) {
+        await getUser()
+        teacherId = useAuth.getState().user?.id
       }
 
-      setCourses((prev) => [newCourse, ...prev])
+      if (!teacherId) {
+        message.error('Unable to identify the logged-in teacher.')
+        return
+      }
+
+      const response = await createCourseMutation.mutateAsync({
+        data: { courseName: values.title.trim(), teacherId }
+      })
+
+      if (!response.success) {
+        message.error(response.message ?? 'Failed to create course')
+        return
+      }
+
+      const { course } = response.data
+
       setIsModalOpen(false)
-      message.success('Course draft saved')
+      setCreatedCourseInfo({ id: course.id, name: course.courseName })
+      setIsSuccessModalOpen(true)
+      message.success(response.message ?? 'Course created successfully')
+      await refetch()
+    } catch (error) {
+      console.error('Create course failed:', error)
+      message.error('Failed to create course')
     } finally {
       setIsSubmitting(false)
     }
   }
-
-  const handleOpenModal = () => setIsModalOpen(true)
-  const handleCloseModal = () => setIsModalOpen(false)
 
   return (
     <React.Fragment>
@@ -164,9 +122,11 @@ const CoursesPage: React.FC = () => {
         <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900">Courses</h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Create new courses and manage the ones you are already running.
-            </p>
+            {responseMessage ? (
+              <p className="mt-2 text-sm text-slate-500">
+                Your courses, your responsibiity
+              </p>
+            ) : null}
           </div>
           <Button
             variant="primary"
@@ -182,79 +142,100 @@ const CoursesPage: React.FC = () => {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="w-full lg:max-w-md">
               <Input
-                placeholder="Search by title or code..."
+                placeholder="Search by title or ID..."
                 prefix={<Icon name="search" size="small" />}
                 value={searchTerm}
-                onChange={(value) => setSearchTerm(value)}
-              />
-            </div>
-            <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
-              <Select
-                value={statusFilter}
-                options={statusFilterOptions}
-                onChange={(value) => setStatusFilter(value as string)}
-                className="!h-12"
-              />
-              <Select
-                value={categoryFilter}
-                options={courseCategoryOptions}
-                onChange={(value) => setCategoryFilter(value as string)}
-                className="!h-12"
-              />
-              <Select
-                placeholder="Level"
-                options={courseLevelOptions}
-                onChange={(_value) => undefined}
-                className="!h-12"
+                onChange={setSearchTerm}
               />
             </div>
           </div>
         </section>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Registered Courses
-          </h2>
-          {filteredCourses.length > 0 ? (
+        {isLoading || isFetching ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+            Loading courses...
+          </div>
+        ) : null}
+
+        {isError ? (
+          <div className="space-y-3 rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-600">
+            <p>Failed to load courses.</p>
+            <button
+              type="button"
+              className="text-blue-600 underline"
+              onClick={() => void refetch()}
+            >
+              Try again
+            </button>
+            {error instanceof Error ? (
+              <p className="text-xs text-red-500">{error.message}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {!isLoading && !isFetching && !isError ? (
+          filteredCourses.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredCourses.map((course) => (
                 <CourseCard
                   key={course.id}
-                  title={course.title}
-                  code={course.code}
-                  status={course.status}
-                  category={course.category}
-                  startDate={course.startDate}
-                  endDate={course.endDate}
-                  studentCount={course.studentCount}
-                  instructor={course.instructor}
-                  onManage={() => message.info('Manage course coming soon')}
-                  onViewDetails={() =>
-                    message.info('Course details will be available soon')
-                  }
+                  courseName={course.courseName}
+                  courseId={course.id}
+                  teacherId={course.teacherId}
+                  teacherName={course.teacherName}
+                  enrollmentCount={course.enrollmentCount}
                 />
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-              <Icon name="courses" className="text-slate-400" size="large" />
-              <p>No courses match your current filters.</p>
-              <Button variant="outline" size="small" onClick={handleOpenModal}>
-                Create your first course
-              </Button>
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
+              No courses match your search.
             </div>
-          )}
-        </section>
+          )
+        ) : null}
       </div>
 
       <CreateCourseModal
         open={isModalOpen}
         loading={isSubmitting}
-        categoryOptions={courseCategoryOptions.slice(1)}
-        levelOptions={courseLevelOptions}
+        categoryOptions={[]}
+        levelOptions={[]}
         onClose={handleCloseModal}
         onSubmit={handleCreateCourseSubmit}
       />
+
+      <Modal
+        open={isSuccessModalOpen}
+        onCancel={handleSuccessModalClose}
+        footer={null}
+        centered
+        width={420}
+        maskClosable
+        className="max-w-full px-4"
+      >
+        <div className="space-y-4 text-center">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-slate-900">
+              Course Created Successfully
+            </h3>
+            <p className="text-sm text-slate-500">
+              {createdCourseInfo?.name ?? 'Your course'} is now available. Use
+              the ID below for future references.
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <code className="truncate font-mono text-sm text-slate-700">
+              {createdCourseInfo?.id}
+            </code>
+            <Button variant="outline" size="small" onClick={handleCopyCourseId}>
+              Copy ID
+            </Button>
+          </div>
+          <Button variant="primary" fullWidth onClick={handleSuccessModalClose}>
+            Close
+          </Button>
+        </div>
+      </Modal>
     </React.Fragment>
   )
 }

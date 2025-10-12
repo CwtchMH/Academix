@@ -10,6 +10,7 @@ import jwtConfig from './config/jwt.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { CertificateModule } from './modules/certificates/certificate.module';
+import { CoursesModule } from './modules/courses/courses.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -63,6 +64,7 @@ import {
     AuthModule,
     HealthModule,
     CertificateModule,
+    CoursesModule,
   ],
   controllers: [AppController],
   providers: [
