@@ -211,13 +211,15 @@ export const CERTIFICATE_SERVICE_ENDPOINT = getApiEndpoint(
 );
 export const COURSE_SERVICE_ENDPOINT = getApiEndpoint(
   API_SERVICES.COURSE_SERVICE
-);
+)
+export const EXAM_SERVICE_ENDPOINT = getApiEndpoint(API_SERVICES.EXAM_SERVICE)
 
 // Export API service methods
-export const TestService = new ApiService(TEST_SERVICE_ENDPOINT);
-export const AuthService = new ApiService(USER_SERVICE_ENDPOINT);
+export const TestService = new ApiService(TEST_SERVICE_ENDPOINT)
+export const AuthService = new ApiService(USER_SERVICE_ENDPOINT)
+export const CourseService = new ApiService(COURSE_SERVICE_ENDPOINT)
+export const ExamService = new ApiService(EXAM_SERVICE_ENDPOINT)
 export const CertificateService = new ApiService(CERTIFICATE_SERVICE_ENDPOINT);
-export const CourseService = new ApiService(COURSE_SERVICE_ENDPOINT);
 
 // Export organized services
 export * from "./api";

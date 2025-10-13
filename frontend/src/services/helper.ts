@@ -1,6 +1,7 @@
 export enum API_SERVICES {
-  TEST_SERVICE = "test",
-  AUTH_SERVICE = "auth",
+  TEST_SERVICE = 'test',
+  AUTH_SERVICE = 'auth',
+  EXAM_SERVICE = 'exams'
   COURSE_SERVICE = "courses",
   CERTIFICATE_SERVICE = "certificates",
 }

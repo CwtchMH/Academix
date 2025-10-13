@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import 'antd/dist/reset.css'
 import { Web3Providers } from '@/lib/providers'
 import { AuthProvider } from '@/providers/AuthProvider'
+import { AntdProvider } from '@/providers/AntdProvider'
 
 import '../styles/style.scss'
 
@@ -33,7 +35,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Web3Providers>
-          <AuthProvider>{children}</AuthProvider>
+          <AntdProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </AntdProvider>
         </Web3Providers>
       </body>
     </html>

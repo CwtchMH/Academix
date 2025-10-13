@@ -1,16 +1,11 @@
-"use client";
+'use client'
 
-import { WalletConnect } from "@/components/WalletConnect";
-import { useTestApiCall } from "@/hooks/test/useTest";
-import { useEffect } from "react";
-import { useAccount } from "wagmi";
+import { WalletConnect } from '@/components/WalletConnect'
+import { useEffect } from 'react'
+import { useAccount } from 'wagmi'
 
 export default function Home() {
-  const { isConnected } = useAccount();
-  const { testFunction } = useTestApiCall();
-  useEffect(() => {
-    testFunction();
-  }, []);
+  const { isConnected } = useAccount()
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
       <div className="max-w-4xl mx-auto">
@@ -59,5 +54,5 @@ export default function Home() {
         )}
       </div>
     </div>
-  );
+  )
 }

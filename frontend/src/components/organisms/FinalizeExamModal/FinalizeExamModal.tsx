@@ -13,17 +13,19 @@ import type {
 } from './FinalizeExamModal.types'
 
 interface FormErrors {
-  examCode?: string
+  courseId?: string
+  durationMinutes?: string
+  rateScore?: string
   startTime?: string
   endTime?: string
 }
 
 const defaultFormValues: FinalizeExamFormValues = {
-  examCode: '',
   courseId: undefined,
   durationMinutes: undefined,
   startTime: null,
-  endTime: null
+  endTime: null,
+  rateScore: undefined
 }
 
 /**
@@ -65,8 +67,32 @@ export const FinalizeExamModal: React.FC<FinalizeExamModalProps> = ({
   const validate = (): boolean => {
     const nextErrors: FormErrors = {}
 
-    if (!formValues.examCode?.trim()) {
-      nextErrors.examCode = 'Exam code is required'
+    if (!formValues.courseId) {
+      nextErrors.courseId = 'Course is required'
+    }
+
+    if (formValues.durationMinutes === undefined) {
+      nextErrors.durationMinutes = 'Duration is required'
+    } else if (Number.isNaN(formValues.durationMinutes)) {
+      nextErrors.durationMinutes = 'Duration must be a number'
+    } else if (formValues.durationMinutes <= 0) {
+      nextErrors.durationMinutes = 'Duration must be greater than 0'
+    }
+
+    if (formValues.rateScore === undefined) {
+      nextErrors.rateScore = 'Passing score is required'
+    } else if (Number.isNaN(formValues.rateScore)) {
+      nextErrors.rateScore = 'Passing score must be a number'
+    } else if (formValues.rateScore < 0 || formValues.rateScore > 100) {
+      nextErrors.rateScore = 'Passing score must be between 0 and 100'
+    }
+
+    if (!formValues.startTime) {
+      nextErrors.startTime = 'Start time is required'
+    }
+
+    if (!formValues.endTime) {
+      nextErrors.endTime = 'End time is required'
     }
 
     if (formValues.startTime && formValues.endTime) {
@@ -84,8 +110,8 @@ export const FinalizeExamModal: React.FC<FinalizeExamModalProps> = ({
 
     const payload: FinalizeExamFormValues = {
       ...formValues,
-      examCode: formValues.examCode.trim(),
-      durationMinutes: formValues.durationMinutes
+      durationMinutes: formValues.durationMinutes,
+      rateScore: formValues.rateScore
     }
 
     onSubmit(payload)
@@ -104,9 +130,7 @@ export const FinalizeExamModal: React.FC<FinalizeExamModalProps> = ({
       centered
       width={520}
       maskClosable={!loading}
-      destroyOnClose
       className="max-w-full px-4"
-      bodyStyle={{ padding: '24px' }}
     >
       <div className="space-y-6">
         <header className="space-y-1">
@@ -119,24 +143,6 @@ export const FinalizeExamModal: React.FC<FinalizeExamModalProps> = ({
         </header>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label
-              className="text-sm font-medium text-slate-700"
-              htmlFor="exam-code"
-            >
-              Exam Code <span className="text-red-500">*</span>
-            </label>
-            <Input
-              id="exam-code"
-              placeholder="e.g., CS101-FINAL"
-              value={formValues.examCode}
-              onChange={(value) => handleFieldChange('examCode', value)}
-            />
-            {errors.examCode && (
-              <span className="text-xs text-red-500">{errors.examCode}</span>
-            )}
-          </div>
-
           <div className="space-y-2">
             <label
               className="text-sm font-medium text-slate-700"
@@ -154,6 +160,9 @@ export const FinalizeExamModal: React.FC<FinalizeExamModalProps> = ({
               options={courseSelectOptions}
               className="!h-12"
             />
+            {errors.courseId && (
+              <span className="text-xs text-red-500">{errors.courseId}</span>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -173,6 +182,28 @@ export const FinalizeExamModal: React.FC<FinalizeExamModalProps> = ({
                   value ? Number(value) : undefined
                 )
               }
+              error={errors.durationMinutes}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              className="text-sm font-medium text-slate-700"
+              htmlFor="rate-score"
+            >
+              Passing Score (%)
+            </label>
+            <Input
+              id="rate-score"
+              placeholder="e.g., 70"
+              value={formValues.rateScore?.toString() ?? ''}
+              onChange={(value) =>
+                handleFieldChange(
+                  'rateScore',
+                  value ? Number(value) : undefined
+                )
+              }
+              error={errors.rateScore}
             />
           </div>
 

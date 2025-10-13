@@ -4,7 +4,7 @@ import { useEffect, ReactNode, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/stores/auth'
 import { getAccessToken } from '@/services/utils/auth.utils'
-import { useAuthHook } from '@/hooks/useAuthHook'
+import { useAuthHook } from '@/services/hooks/useAuthHook'
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname()
