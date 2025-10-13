@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 
 // Định nghĩa các menu items với đường dẫn (href)
 const studentMenuItems = [
-  { id: "dashboard", label: "Dashboard", icon: <Icon name="dashboard" />, href: "/dashboard" },
+  { id: "dashboard", label: "Dashboard", icon: <Icon name="dashboard" />, href: "/dashboard/student/dashboard" },
   { id: "exams", label: "Exams", icon: <Icon name="exams" />, href: "/dashboard/student/exams" },
   { id: "certificates", label: "Certificates", icon: <Icon name="certificates" />, href: "/dashboard/student/certificates" },
 ];

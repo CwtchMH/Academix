@@ -1,8 +1,17 @@
+/* src/app/globals.css */
+
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* === BỔ SUNG CÁC BIẾN MÀU TỪ DESIGN CỦA TRANG EXAMS === */
+  --primary-color: #0d47a1;
+  --light-gray: #f0f2f4;
+  --dark-text: #1a202c;
+  --medium-text: #4a5568;
+  --light-text: #718096;
 }
 
 @theme inline {
@@ -15,5 +24,30 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Dòng này có thể bị ghi đè bởi --font-sans trong @theme, bạn có thể cân nhắc xóa đi */
+  font-family: Arial, Helvetica, sans-serif; 
+}
+
+/* === BỔ SUNG CÁC LỚP COMPONENT TỪ DESIGN CỦA TRANG EXAMS === */
+@layer components {
+  .btn-primary {
+    @apply bg-[var(--primary-color)] text-white hover:bg-blue-800 transition-colors duration-300;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-[var(--medium-text)] border border-gray-300 hover:bg-gray-50;
+  }
+  
+  .sidebar-active {
+    @apply bg-blue-100 text-[var(--primary-color)] font-semibold border-l-4 border-[var(--primary-color)];
+  }
+  .sidebar-inactive {
+    @apply text-[var(--medium-text)] hover:bg-gray-200 hover:text-[var(--dark-text)] border-l-4 border-transparent;
+  }
+  .tab-active {
+    @apply border-b-2 border-[var(--primary-color)] text-[var(--primary-color)] font-semibold;
+  }
+  .tab-inactive {
+    @apply border-b-2 border-transparent text-[var(--medium-text)] hover:text-[var(--dark-text)];
+  }
 }
