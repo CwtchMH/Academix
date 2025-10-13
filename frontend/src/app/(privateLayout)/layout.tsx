@@ -1,3 +1,4 @@
+// app/(privateLayout)/layout.tsx
 'use client'
 
 import React from 'react'
@@ -9,7 +10,7 @@ export default function MainLayoutWrapper({
   children: React.ReactNode
 }) {
   return (
-    <MainLayout hasNotification={true} initialActiveItem="dashboard">
+    <MainLayout hasNotification={true}>
       {children}
     </MainLayout>
   )

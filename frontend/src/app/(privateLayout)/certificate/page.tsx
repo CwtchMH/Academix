@@ -1,48 +1,51 @@
+"use client";
 import SearchFilter, {
   SearchFilterType,
 } from "@/components/certificate/SearchFilter";
+import { useCertificate } from "@/hooks/certificate/useCertificate";
 import { Flex } from "antd";
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
+
+const courses = [
+  {
+    title: "Course name",
+    dateIssued: "15 June, 2023",
+    status: "Verified",
+  },
+  {
+    title: "Course name",
+    dateIssued: "15 June, 2023",
+    status: "Verified",
+  },
+  {
+    title: "Course name",
+    dateIssued: "15 June, 2023",
+    status: "Verified",
+  },
+  {
+    title: "Course name",
+    dateIssued: "15 June, 2023",
+    status: "Verified",
+  },
+  {
+    title: "Course name",
+    dateIssued: "15 June, 2023",
+    status: "Verified",
+  },
+  {
+    title: "Course name",
+    dateIssued: "15 June, 2023",
+    status: "Verified",
+  },
+  {
+    title: "Course name",
+    dateIssued: "15 June, 2023",
+    status: "Verified",
+  },
+];
 
 const certificate = () => {
-  const courses = [
-    {
-      title: "Course name",
-      dateIssued: "15 June, 2023",
-      status: "Verified",
-    },
-    {
-      title: "Course name",
-      dateIssued: "15 June, 2023",
-      status: "Verified",
-    },
-    {
-      title: "Course name",
-      dateIssued: "15 June, 2023",
-      status: "Verified",
-    },
-    {
-      title: "Course name",
-      dateIssued: "15 June, 2023",
-      status: "Verified",
-    },
-    {
-      title: "Course name",
-      dateIssued: "15 June, 2023",
-      status: "Verified",
-    },
-    {
-      title: "Course name",
-      dateIssued: "15 June, 2023",
-      status: "Verified",
-    },
-    {
-      title: "Course name",
-      dateIssued: "15 June, 2023",
-      status: "Verified",
-    },
-  ];
-
+  const { data: certificates, loading, error } = useCertificate();
   return (
     <Fragment>
       <h1 className="font-bold text-[30px] leading-[36px]">My Certificates</h1>
@@ -88,21 +91,21 @@ const certificate = () => {
         </div>
       </div>
       <Flex gap={24} className="flex-wrap">
-        {courses.map((item, index) => (
+        {certificates.map((item, index) => (
           <div
             key={index}
             className="p-6 rounded-[8px] bg-white inline-block shadow-md"
           >
             <Flex gap={10}>
               <p className="font-semibold text-[20px] leading-[28px] min-w-[244px]">
-                {item?.title}
+                {item?.course?.courseName}
               </p>
               <div className="text-[#166533] font-medium text-[12px] bg-[#DCFCE7] py-[2px] px-[10px] rounded-[9999px] flex items-center">
                 {item?.status}
               </div>
             </Flex>
             <p className="text-[#718096] text-[14px] leading-[20px] ">
-              Date Issued: {item?.dateIssued}
+              Date Issued: {item?.issuedAt}
             </p>
             <button className="text-white bg-[#4B5563] text-[14px] font-semibold w-full py-3 rounded-[6px] mt-6">
               View & Verify
