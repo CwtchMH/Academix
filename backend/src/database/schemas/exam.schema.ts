@@ -5,9 +5,6 @@ export type ExamDocument = Exam & Document;
 
 @Schema({ timestamps: true })
 export class Exam {
-  @Prop({ required: true, unique: true })
-  examCode: string;
-
   @Prop({ required: true })
   title: string;
 
@@ -46,7 +43,6 @@ export class Exam {
 export const ExamSchema = SchemaFactory.createForClass(Exam);
 
 // Indexes
-ExamSchema.index({ examCode: 1 });
 ExamSchema.index({ courseId: 1 });
 ExamSchema.index({ status: 1 });
 ExamSchema.index({ startTime: 1, endTime: 1 });

@@ -1,5 +1,7 @@
+'use client'
+
 import React from 'react'
-import { message } from 'antd'
+import { App } from 'antd'
 import { Button, Icon } from '@/components/atoms'
 import type { CourseCardProps } from './CourseCard.types'
 
@@ -10,6 +12,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   teacherId,
   enrollmentCount
 }) => {
+  const { message } = App.useApp()
+
   const handleCopyCourseId = () => {
     if (!courseId) return
 

@@ -46,7 +46,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const menuItems =
     user?.role === 'teacher'
-      ? menuAllItems
+      ? menuAllItems.filter(
+          (item) =>
+            item.id !== 'exams' &&
+            item.id !== 'results' &&
+            item.id !== 'certificates'
+        )
       : menuAllItems.filter((item) => item.id !== 'students')
 
   return (

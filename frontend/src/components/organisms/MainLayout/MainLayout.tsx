@@ -1,9 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navbar, Sidebar } from '@/components/molecules'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useAuth } from '@/stores/auth'
 import type { MainLayoutProps } from '@/components/organisms/MainLayout/MainLayout.types'
+import { resolveActiveSidebarItem } from '@/utils/navigation'
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
@@ -11,9 +13,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   initialActiveItem = 'dashboard',
   hasNotification = false
 }) => {
-  const [activeItem, setActiveItem] = useState(initialActiveItem)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
+  const { user } = useAuth()
+  const [activeItem, setActiveItem] = useState<string | null>(() => {
+    return resolveActiveSidebarItem(pathname) ?? initialActiveItem ?? null
+  })
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
+  useEffect(() => {
+    const resolvedItem = resolveActiveSidebarItem(pathname)
+    setActiveItem(resolvedItem ?? null)
+  }, [pathname])
 
   const handleLogoClick = () => {
     router.push('/')
@@ -21,6 +32,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   const handleSidebarItemClick = (itemId: string) => {
     setActiveItem(itemId)
+    let url = '/'
+    switch (itemId) {
+      case 'dashboard':
+        url = `/dashboard/${user?.role === 'teacher' ? 'teacher' : 'student'}/`
+        break
+      case 'courses':
+        url = `/dashboard/${
+          user?.role === 'teacher' ? 'teacher' : 'student'
+        }/courses`
+        break
+      case 'students':
+        url = '/students'
+        break
+      default:
+        url = '/'
+        break
+    }
+    router.push(url)
   }
 
   const toggleSidebar = () => {
@@ -76,7 +105,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       `}
       >
         <Sidebar
-          activeItem={activeItem}
+          activeItem={activeItem ?? ''}
           onItemClick={handleSidebarItemClick}
           isCollapsed={isSidebarCollapsed}
           onLogoClick={handleLogoClick}

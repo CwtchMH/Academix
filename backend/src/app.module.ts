@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { CertificateModule } from './modules/certificates/certificate.module';
 import { CoursesModule } from './modules/courses/courses.module';
+import { ExamsModule } from './modules/exams/exams.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -65,6 +66,7 @@ import {
     HealthModule,
     CertificateModule,
     CoursesModule,
+    ExamsModule,
   ],
   controllers: [AppController],
   providers: [

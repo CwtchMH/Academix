@@ -1,12 +1,22 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { Button, Icon, Input, Textarea } from '@/components/atoms'
+import React, { useEffect, useMemo, useState } from 'react'
+import { App, Form, Radio } from 'antd'
+import {
+  Button,
+  Icon,
+  Input,
+  Textarea,
+  type SelectOption
+} from '@/components/atoms'
 import { QuestionPreviewItem } from '@/components/molecules'
 import {
   FinalizeExamModal,
   type FinalizeExamFormValues
 } from '@/components/organisms'
+import { useCreateExam, type CreateExamRequest } from '@/services/api/exam.api'
+import { useTeacherCourses } from '@/services/api/course.api'
+import { useAuth } from '@/stores/auth'
 
 interface AnswerChoiceDraft {
   id: string
@@ -20,49 +30,48 @@ interface ExamQuestion {
   correctChoiceId?: string | null
 }
 
-const defaultChoices = (): AnswerChoiceDraft[] => [
-  { id: 'choice-1', text: '' },
-  { id: 'choice-2', text: '' },
-  { id: 'choice-3', text: '' },
-  { id: 'choice-4', text: '' }
-]
-
-const initialQuestions: ExamQuestion[] = [
-  {
-    id: 'question-1',
-    prompt: 'What is the powerhouse of the cell?',
-    choices: [],
-    correctChoiceId: null
-  },
-  {
-    id: 'question-2',
-    prompt: 'Which planet is known as the Red Planet?',
-    choices: [],
-    correctChoiceId: null
-  },
-  {
-    id: 'question-3',
-    prompt: 'What is the chemical symbol for Gold?',
-    choices: [],
-    correctChoiceId: null
+const generateChoiceId = (index: number) => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `choice-${crypto.randomUUID()}`
   }
-]
+  return `choice-${Date.now()}-${index}`
+}
 
-const courseOptions = [
-  { label: 'Biology 101', value: 'bio-101' },
-  { label: 'Chemistry 201', value: 'chem-201' },
-  { label: 'Astronomy 105', value: 'astro-105' }
-]
+const createEmptyChoices = (count = 4): AnswerChoiceDraft[] => {
+  return Array.from({ length: count }).map((_, index) => ({
+    id: generateChoiceId(index),
+    text: ''
+  }))
+}
+
+const padChoices = (choices: AnswerChoiceDraft[], desiredLength = 4) => {
+  const padded = choices.map((choice, index) => ({
+    id: choice.id ?? generateChoiceId(index),
+    text: choice.text ?? ''
+  }))
+
+  while (padded.length < desiredLength) {
+    padded.push({ id: generateChoiceId(padded.length), text: '' })
+  }
+
+  return padded.slice(0, desiredLength)
+}
+
+const initialQuestions: ExamQuestion[] = []
 
 export default function CreateTeacherExamPage() {
-  const [examTitle, setExamTitle] = useState(
-    'Mid-Term Biology Exam (AI Generated)'
+  const { message } = App.useApp()
+  const { user, getUser } = useAuth()
+  const createExamMutation = useCreateExam()
+  const { data: teacherCoursesData } = useTeacherCourses(user?.id, {
+    enabled: Boolean(user?.id),
+    refetchOnWindowFocus: false
+  })
+  const [examTitle, setExamTitle] = useState('')
+  const [choiceTemplate, setChoiceTemplate] = useState<AnswerChoiceDraft[]>(
+    createEmptyChoices()
   )
-  const [questionContent, setQuestionContent] = useState('')
-  const [choiceDrafts, setChoiceDrafts] = useState<AnswerChoiceDraft[]>(
-    defaultChoices()
-  )
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null)
+  const [correctChoiceId, setCorrectChoiceId] = useState<string | null>(null)
   const [questions, setQuestions] = useState<ExamQuestion[]>(initialQuestions)
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
     null
@@ -71,61 +80,230 @@ export default function CreateTeacherExamPage() {
     null
   )
   const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [form] = Form.useForm<{
+    prompt: string
+    choices: { text: string }[]
+    correctChoiceId?: string
+  }>()
 
   const totalQuestions = useMemo(() => questions.length, [questions])
 
-  const handleChoiceChange = (choiceId: string, text: string) => {
-    setChoiceDrafts((prev) =>
-      prev.map((choice) =>
-        choice.id === choiceId ? { ...choice, text } : choice
+  useEffect(() => {
+    if (!user?.id) {
+      void getUser()
+    }
+  }, [user?.id, getUser])
+
+  const courseOptions = useMemo<SelectOption[]>(() => {
+    const courses = teacherCoursesData?.data.courses ?? []
+    return courses.map((course) => ({
+      label: course.courseName ?? course.id,
+      value: course.id
+    }))
+  }, [teacherCoursesData])
+
+  const getQuestionPayloads = (): CreateExamRequest['questions'] => {
+    if (questions.length === 0) {
+      throw new Error('Please add at least one question before saving.')
+    }
+
+    return questions.map((question, index) => {
+      const trimmedPrompt = question.prompt.trim()
+
+      if (!trimmedPrompt) {
+        throw new Error(`Question ${index + 1} is missing content.`)
+      }
+
+      const trimmedChoices = question.choices
+        .map((choice) => ({
+          ...choice,
+          text: choice.text.trim()
+        }))
+        .filter((choice) => choice.text.length > 0)
+
+      if (trimmedChoices.length < 2) {
+        throw new Error(
+          `Question ${index + 1} must have at least two answer choices.`
+        )
+      }
+
+      const correctIndex = trimmedChoices.findIndex(
+        (choice) => choice.id === question.correctChoiceId
       )
-    )
+
+      if (correctIndex === -1) {
+        throw new Error(
+          `Please mark the correct answer for question ${index + 1}.`
+        )
+      }
+
+      return {
+        content: trimmedPrompt,
+        answerQuestion: correctIndex + 1,
+        answer: trimmedChoices.map((choice) => ({ content: choice.text }))
+      }
+    })
+  }
+
+  const buildExamRequest = (
+    finalizeValues: FinalizeExamFormValues
+  ): CreateExamRequest => {
+    const trimmedTitle = examTitle.trim()
+
+    if (!trimmedTitle) {
+      throw new Error('Please enter an exam title before saving.')
+    }
+
+    const questionPayloads = getQuestionPayloads()
+
+    const { courseId, durationMinutes, startTime, endTime, rateScore } =
+      finalizeValues
+
+    if (!courseId) {
+      throw new Error('Please select a course for this exam.')
+    }
+
+    if (
+      durationMinutes === undefined ||
+      Number.isNaN(durationMinutes) ||
+      durationMinutes <= 0
+    ) {
+      throw new Error('Please provide a valid exam duration.')
+    }
+
+    if (!startTime) {
+      throw new Error('Please provide a start time.')
+    }
+
+    if (!endTime) {
+      throw new Error('Please provide an end time.')
+    }
+
+    if (startTime.isAfter(endTime)) {
+      throw new Error('End time must be after start time.')
+    }
+
+    if (rateScore === undefined || Number.isNaN(rateScore)) {
+      throw new Error('Please provide a passing score.')
+    }
+
+    return {
+      title: trimmedTitle,
+      durationMinutes,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      status: 'draft',
+      courseId,
+      rateScore,
+      questions: questionPayloads
+    }
+  }
+
+  const applyBuilderValues = (
+    choices: AnswerChoiceDraft[],
+    prompt = '',
+    correctChoiceId?: string | null
+  ) => {
+    const paddedChoices = padChoices(choices)
+    const sanitizedCorrectId =
+      correctChoiceId &&
+      paddedChoices.some((choice) => choice.id === correctChoiceId)
+        ? correctChoiceId
+        : null
+
+    setChoiceTemplate(paddedChoices)
+    setCorrectChoiceId(sanitizedCorrectId)
+    form.setFieldsValue({
+      prompt
+    })
   }
 
   const resetBuilder = () => {
-    setQuestionContent('')
-    setChoiceDrafts(defaultChoices())
-    setSelectedChoiceId(null)
     setEditingQuestionId(null)
+    form.resetFields(['prompt'])
+    applyBuilderValues(createEmptyChoices())
   }
 
-  const handleAddQuestion = () => {
-    if (!questionContent.trim()) return
+  useEffect(() => {
+    applyBuilderValues(choiceTemplate)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-    const choicePayload = choiceDrafts.filter((choice) => choice.text.trim())
-    const correctChoiceId = choicePayload.some(
-      (choice) => choice.id === selectedChoiceId
-    )
-      ? selectedChoiceId
-      : null
-    const payload: ExamQuestion = {
-      id: editingQuestionId ?? `question-${Date.now()}`,
-      prompt: questionContent.trim(),
-      choices: choicePayload,
-      correctChoiceId
-    }
+  const handleChoiceTextChange = (index: number, value: string) => {
+    setChoiceTemplate((prev) => {
+      const updated = [...prev]
+      const target = updated[index]
 
-    setQuestions((prev) => {
-      if (editingQuestionId) {
-        return prev.map((question) =>
-          question.id === editingQuestionId ? payload : question
-        )
+      if (!target) {
+        return updated
       }
-      return [...prev, payload]
-    })
 
-    resetBuilder()
+      updated[index] = { ...target, text: value }
+      return updated
+    })
+  }
+
+  const handleSelectCorrectChoice = (value: string) => {
+    setCorrectChoiceId(value)
+  }
+
+  const handleAddQuestion = async (values: { prompt: string }) => {
+    try {
+      const trimmedPrompt = values.prompt.trim()
+      const mergedChoices = choiceTemplate.map((choice) => ({
+        id: choice.id,
+        text: choice.text.trim()
+      }))
+
+      const choicePayload = mergedChoices.filter(
+        (choice) => choice.text.length > 0
+      )
+
+      if (choicePayload.length < 2) {
+        message.error('Please provide at least two answer choices.')
+        return
+      }
+
+      if (
+        !correctChoiceId ||
+        !choicePayload.some((choice) => choice.id === correctChoiceId)
+      ) {
+        message.error(
+          'Please select the correct answer from the provided choices.'
+        )
+        return
+      }
+
+      const payload: ExamQuestion = {
+        id: editingQuestionId ?? `question-${Date.now()}`,
+        prompt: trimmedPrompt,
+        choices: choicePayload,
+        correctChoiceId
+      }
+
+      setQuestions((prev) => {
+        if (editingQuestionId) {
+          return prev.map((question) =>
+            question.id === editingQuestionId ? payload : question
+          )
+        }
+        return [...prev, payload]
+      })
+
+      resetBuilder()
+    } catch (errorInfo) {
+      void errorInfo
+    }
   }
 
   const handleEditQuestion = (question: ExamQuestion) => {
     setEditingQuestionId(question.id)
-    setQuestionContent(question.prompt)
-    setChoiceDrafts(
-      question.choices.length > 0 ? question.choices : defaultChoices()
-    )
-    setSelectedChoiceId(question.correctChoiceId ?? null)
     setExpandedQuestionId(question.id)
+    applyBuilderValues(
+      question.choices,
+      question.prompt,
+      question.correctChoiceId
+    )
   }
 
   const handleDeleteQuestion = (questionId: string) => {
@@ -143,41 +321,60 @@ export default function CreateTeacherExamPage() {
 
   const handleGenerateAi = () => {
     // Future: replace with actual AI generation logic
-    setQuestionContent(
-      'Describe the process of photosynthesis and its stages in plant cells.'
-    )
+    console.log('AI generation not implemented yet')
   }
 
-  const buildExamPayload = () => ({
-    title: examTitle.trim(),
-    questions: questions.map((question, index) => ({
-      order: index + 1,
-      prompt: question.prompt,
-      choices: question.choices,
-      correctChoiceId: question.correctChoiceId
-    }))
-  })
-
   const handleSaveExamClick = () => {
-    setIsFinalizeModalOpen(true)
+    try {
+      const trimmedTitle = examTitle.trim()
+
+      if (!trimmedTitle) {
+        throw new Error('Please enter an exam title before saving.')
+      }
+
+      getQuestionPayloads()
+      setIsFinalizeModalOpen(true)
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message)
+      } else {
+        message.error('Unable to proceed. Please review the exam details.')
+      }
+    }
   }
 
   const handleFinalizeExamSubmit = async (
     finalizeValues: FinalizeExamFormValues
   ) => {
-    const payload = {
-      ...buildExamPayload(),
-      schedule: finalizeValues
-    }
-
-    setIsSubmitting(true)
-
     try {
-      // TODO: replace with actual API call
-      void payload
+      const requestPayload = buildExamRequest(finalizeValues)
+      const response = await createExamMutation.mutateAsync({
+        data: requestPayload as unknown as Record<string, unknown>
+      })
+
+      if (!response.success) {
+        message.error(response.message ?? 'Failed to create exam')
+        return
+      }
+
+      message.success(response.message ?? 'Exam created successfully')
       setIsFinalizeModalOpen(false)
-    } finally {
-      setIsSubmitting(false)
+      setExamTitle('')
+      setQuestions([])
+      resetBuilder()
+    } catch (error) {
+      const apiError = error as {
+        response?: { data?: { message?: string } }
+        message?: string
+      }
+
+      if (!apiError.response && apiError.message) {
+        message.error(apiError.message)
+        return
+      }
+
+      const apiMessage = apiError.response?.data?.message
+      message.error(apiMessage ?? 'Failed to create exam')
     }
   }
 
@@ -221,68 +418,76 @@ export default function CreateTeacherExamPage() {
               </Button>
             </div>
 
-            <form
-              className="mt-6 space-y-5"
-              onSubmit={(event) => event.preventDefault()}
+            <Form
+              form={form}
+              layout="vertical"
+              className="mt-4 space-y-5"
+              initialValues={{
+                prompt: ''
+              }}
+              onFinish={handleAddQuestion}
             >
-              <div className="space-y-2">
-                <label
-                  className="text-sm font-medium text-slate-600"
-                  htmlFor="question-content"
-                >
-                  Question Content
-                </label>
+              <Form.Item
+                name="prompt"
+                label="Question Content"
+                rules={[
+                  {
+                    required: true,
+                    message: 'Please enter the question content'
+                  },
+                  {
+                    min: 5,
+                    message: 'Question content should be at least 5 characters'
+                  }
+                ]}
+              >
                 <Textarea
                   id="question-content"
                   placeholder="Enter question content here"
-                  value={questionContent}
-                  onChange={setQuestionContent}
-                  rows={5}
+                  rows={2}
                 />
-              </div>
+              </Form.Item>
 
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-600">
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-slate-600">
                   Answer Choices
-                </p>
-                <div className="space-y-3">
-                  {choiceDrafts.map((choice, index) => (
-                    <label
+                </div>
+                <Radio.Group
+                  className="flex w-full flex-col space-y-2"
+                  value={correctChoiceId ?? undefined}
+                  onChange={(event) =>
+                    handleSelectCorrectChoice(event.target.value)
+                  }
+                >
+                  {choiceTemplate.map((choice, index) => (
+                    <div
                       key={choice.id}
                       className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 transition hover:border-blue-200"
                     >
-                      <input
-                        type="radio"
-                        name="answer-choice"
-                        checked={selectedChoiceId === choice.id}
-                        onChange={() => setSelectedChoiceId(choice.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                      />
+                      <Radio value={choice.id} className="pt-1" />
                       <Input
-                        placeholder={`Answer Choice ${index + 1}`}
                         value={choice.text}
                         onChange={(value) =>
-                          handleChoiceChange(choice.id, value)
+                          handleChoiceTextChange(index, value)
                         }
-                        className="flex-1"
+                        placeholder={`Answer Choice ${index + 1}`}
                       />
-                    </label>
+                    </div>
                   ))}
-                </div>
+                </Radio.Group>
               </div>
 
               <Button
-                htmlType="button"
+                htmlType="submit"
                 size="large"
                 variant="primary"
                 fullWidth
-                onClick={handleAddQuestion}
               >
                 {editingQuestionId
                   ? 'Update Question'
                   : 'Add Question to Preview'}
               </Button>
-            </form>
+            </Form>
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
@@ -349,7 +554,7 @@ export default function CreateTeacherExamPage() {
         onClose={() => setIsFinalizeModalOpen(false)}
         onSubmit={handleFinalizeExamSubmit}
         courseOptions={courseOptions}
-        loading={isSubmitting}
+        loading={createExamMutation.isPending}
       />
     </React.Fragment>
   )

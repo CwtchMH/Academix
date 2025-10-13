@@ -6,17 +6,27 @@ import {
   HttpStatus,
   Param,
   Post,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateBasicCourseDto } from './dto/course.dto';
 import { ResponseHelper } from '../../common/dto/response.dto';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 
 @ApiTags('Courses')
+@ApiBearerAuth()
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new course (teachers only)' })
@@ -45,6 +55,7 @@ export class CoursesController {
     return ResponseHelper.success({ course }, 'Course created successfully');
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('teacher/:teacherId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List courses created by a teacher' })

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { message, Modal } from 'antd'
+import { App, Modal, Spin } from 'antd'
 import { Button, Icon, Input } from '@/components/atoms'
 import { CourseCard } from '@/components/molecules'
 import {
@@ -12,6 +12,7 @@ import { useCreateCourse, useTeacherCourses } from '@/services/api/course.api'
 import { useAuth } from '@/stores/auth'
 
 const CoursesPage: React.FC = () => {
+  const { message } = App.useApp()
   const { user, getUser } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -23,12 +24,6 @@ const CoursesPage: React.FC = () => {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
 
   const createCourseMutation = useCreateCourse()
-
-  useEffect(() => {
-    if (!user?.id) {
-      void getUser()
-    }
-  }, [user?.id, getUser])
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useTeacherCourses(user?.id, {
@@ -152,8 +147,8 @@ const CoursesPage: React.FC = () => {
         </section>
 
         {isLoading || isFetching ? (
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-            Loading courses...
+          <div className="flex items-center justify-center rounded-3xl border border-slate-200 bg-white p-6">
+            <Spin tip="Loading courses..." />
           </div>
         ) : null}
 

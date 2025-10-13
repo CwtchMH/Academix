@@ -68,9 +68,7 @@ export const CreateCourseModal: React.FC<CreateCourseModalProps> = ({
       centered
       width={560}
       maskClosable={!loading}
-      destroyOnClose
       className="max-w-full px-4"
-      bodyStyle={{ padding: '24px' }}
     >
       <div className="space-y-6">
         <header className="space-y-1">

@@ -1,67 +1,21 @@
 'use client'
 
+import { useMemo } from 'react'
+import { Spin } from 'antd'
 import { Badge, Button, Icon, Input, Select } from '@/components/atoms'
 import { StatCard } from '@/components/molecules'
+import { useRouter } from 'next/navigation'
+import { useExams } from '@/services/api/exam.api'
 
-type ExamStatus = 'Active' | 'Scheduled' | 'Completed'
+type ExamStatus = 'active' | 'scheduled' | 'completed'
 
 interface ExamRow {
+  id: string
   code: string
   status: ExamStatus
   startTime: string
+  endTime: string
 }
-
-const stats = [
-  {
-    title: 'Total Students',
-    value: '12,450',
-    description: 'Across all enrolled cohorts',
-    accentColorClass: 'bg-blue-50 text-blue-600',
-    icon: <Icon name="students" className="text-blue-600" size="large" />
-  },
-  {
-    title: 'Active Exams',
-    value: '35',
-    description: 'Currently in progress',
-    accentColorClass: 'bg-violet-50 text-violet-600',
-    icon: <Icon name="exams" className="text-violet-600" size="large" />
-  },
-  {
-    title: 'Certificates Issued',
-    value: '8,921',
-    description: 'Issued in the last 12 months',
-    accentColorClass: 'bg-emerald-50 text-emerald-600',
-    icon: <Icon name="certificates" className="text-emerald-600" size="large" />
-  }
-]
-
-const examRows: ExamRow[] = [
-  {
-    code: 'EXM2024-001',
-    status: 'Active',
-    startTime: '2024-03-15 09:00 AM'
-  },
-  {
-    code: 'EXM2024-002',
-    status: 'Completed',
-    startTime: '2024-03-10 10:00 AM'
-  },
-  {
-    code: 'EXM2024-003',
-    status: 'Scheduled',
-    startTime: '2024-03-20 11:00 AM'
-  },
-  {
-    code: 'EXM2024-004',
-    status: 'Active',
-    startTime: '2024-03-16 01:00 PM'
-  },
-  {
-    code: 'EXM2024-005',
-    status: 'Completed',
-    startTime: '2024-03-05 02:00 PM'
-  }
-]
 
 const statusFilterOptions = [
   { label: 'Status: All', value: 'all' },
@@ -81,12 +35,110 @@ const statusVariantMap: Record<
   ExamStatus,
   'active' | 'scheduled' | 'completed'
 > = {
-  Active: 'active',
-  Scheduled: 'scheduled',
-  Completed: 'completed'
+  active: 'active',
+  scheduled: 'scheduled',
+  completed: 'completed'
+}
+
+const statusLabelMap: Record<ExamStatus, string> = {
+  active: 'Active',
+  scheduled: 'Scheduled',
+  completed: 'Completed'
+}
+
+const numberFormatter = new Intl.NumberFormat()
+
+const normalizeStatus = (status: string): ExamStatus => {
+  const normalized = status?.toLowerCase() as ExamStatus
+  if (
+    normalized === 'active' ||
+    normalized === 'scheduled' ||
+    normalized === 'completed'
+  ) {
+    return normalized
+  }
+  return 'scheduled'
+}
+
+const formatDateTime = (isoString: string) => {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(isoString))
+  } catch (error) {
+    void error
+    return isoString
+  }
 }
 
 export default function TeacherDashboardPage() {
+  const router = useRouter()
+  const {
+    data: examsResponse,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch
+  } = useExams()
+
+  const exams = examsResponse?.data.exams ?? []
+  const isBusy = isLoading || isFetching
+
+  const examRows = useMemo<ExamRow[]>(() => {
+    return exams.map((exam) => {
+      return {
+        id: exam.id,
+        code: exam.id,
+        status: normalizeStatus(exam.status),
+        startTime: formatDateTime(exam.startTime),
+        endTime: formatDateTime(exam.endTime)
+      }
+    })
+  }, [exams])
+
+  const activeExamsCount = useMemo(() => {
+    return exams.reduce((count, exam) => {
+      return normalizeStatus(exam.status) === 'active' ? count + 1 : count
+    }, 0)
+  }, [exams])
+
+  const stats = useMemo(
+    () => [
+      {
+        title: 'Total Students',
+        value: '12,450',
+        description: 'Across all enrolled cohorts',
+        accentColorClass: 'bg-blue-50 text-blue-600',
+        icon: <Icon name="students" className="text-blue-600" size="large" />
+      },
+      {
+        title: 'Active Exams',
+        value: numberFormatter.format(activeExamsCount),
+        description: 'Currently in progress',
+        accentColorClass: 'bg-violet-50 text-violet-600',
+        icon: <Icon name="exams" className="text-violet-600" size="large" />
+      },
+      {
+        title: 'Certificates Issued',
+        value: '8,921',
+        description: 'Issued in the last 12 months',
+        accentColorClass: 'bg-emerald-50 text-emerald-600',
+        icon: (
+          <Icon name="certificates" className="text-emerald-600" size="large" />
+        )
+      }
+    ],
+    [activeExamsCount]
+  )
+  const handleCreateExam = () => {
+    router.push('/dashboard/teacher/exams/create')
+  }
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -100,6 +152,7 @@ export default function TeacherDashboardPage() {
           size="medium"
           variant="primary"
           className="self-start md:self-auto"
+          onClick={handleCreateExam}
         >
           + Create New Exam
         </Button>
@@ -137,62 +190,100 @@ export default function TeacherDashboardPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto max-h-[calc(100vh-100px)]">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead>
-                <tr className="text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  <th scope="col" className="px-4 py-3">
-                    Exam Code
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Status
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Start Time
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-                {examRows.map((exam) => (
-                  <tr key={exam.code} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {exam.code}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        label={exam.status}
-                        variant={statusVariantMap[exam.status] ?? 'default'}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {exam.startTime}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="small"
-                          variant="outline"
-                          className="!px-3"
-                        >
-                          View Results
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outline"
-                          className="!px-3"
-                        >
-                          Edit
-                        </Button>
-                      </div>
-                    </td>
+          {isBusy ? (
+            <div className="flex h-40 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
+              <Spin tip="Loading exams..." />
+            </div>
+          ) : isError ? (
+            <div className="space-y-3 rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-600">
+              <p>Failed to load exams.</p>
+              <button
+                type="button"
+                className="text-blue-600 underline"
+                onClick={() => void refetch()}
+              >
+                Try again
+              </button>
+              {error instanceof Error ? (
+                <p className="text-xs text-red-500">{error.message}</p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-[calc(100vh-100px)]">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead>
+                  <tr className="text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th scope="col" className="px-4 py-3">
+                      Exam Code
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Start Time
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      End Time
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                  {examRows.length > 0 ? (
+                    examRows.map((exam) => (
+                      <tr key={exam.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium text-slate-900">
+                          {exam.code}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            label={statusLabelMap[exam.status] ?? exam.status}
+                            variant={statusVariantMap[exam.status] ?? 'default'}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {exam.startTime}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {exam.endTime}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="small"
+                              variant="outline"
+                              className="!px-3"
+                            >
+                              View Results
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outline"
+                              className="!px-3"
+                            >
+                              Edit
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-6 text-center text-sm text-slate-500"
+                      >
+                        No exams found. Create your first exam to see it listed
+                        here.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </section>
     </div>
