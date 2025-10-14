@@ -22,10 +22,10 @@ export default function RegisterPage() {
       setErrorMessage('')
 
       // Extract only needed fields for API
-      const { username, email, password, role } = formData
+      const { fullName, username, email, password, role } = formData
 
       const response = await registerMutation.mutateAsync({
-        data: { username, email, password, role }
+        data: { fullName, username, email, password, role }
       })
 
       if (response.success) {
