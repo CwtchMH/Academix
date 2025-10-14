@@ -8,4 +8,5 @@ export interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onError?: (error: string) => void;
 }

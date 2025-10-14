@@ -58,7 +58,7 @@ export interface ChangePasswordResponse {
 export const changePassword = async (
   data: ChangePasswordRequest
 ): Promise<ChangePasswordResponse> => {
-  const response = await AuthService.apiMethod.put<ChangePasswordResponse>({
+  const response = await AuthService.apiMethod.post<ChangePasswordResponse>({
     url: "/change-password",
     data,
   });
