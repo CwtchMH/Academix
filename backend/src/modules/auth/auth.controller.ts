@@ -6,6 +6,7 @@ import {
   HttpStatus,
   UseGuards,
   Get,
+  Put,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,7 +15,13 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, RefreshTokenDto } from './dto/auth.dto';
+import {
+  LoginDto,
+  RegisterDto,
+  RefreshTokenDto,
+  ChangePasswordDto,
+  UpdateProfileDto,
+} from './dto/auth.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/user.decorator';
@@ -122,19 +129,113 @@ export class AuthController {
       },
     },
   })
-  getProfile(@CurrentUser() user: IUser) {
-    // Chỉ trả về các trường cần thiết
-    const basicUserInfo = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-    return ResponseHelper.success(
-      { user: basicUserInfo },
-      'Profile retrieved successfully',
+  async getProfile(@CurrentUser() user: IUser) {
+    const result = await this.authService.getProfile(user.id);
+    return ResponseHelper.success(result, 'Profile retrieved successfully');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          message: 'Password changed successfully',
+        },
+        message: 'Password changed successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Current password is incorrect',
+    schema: {
+      example: {
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Current password is incorrect',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'New password must be different from current password',
+    schema: {
+      example: {
+        success: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'New password must be different from current password',
+        },
+      },
+    },
+  })
+  async changePassword(
+    @CurrentUser() user: IUser,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    const result = await this.authService.changePassword(
+      user.id,
+      changePasswordDto,
     );
+    return ResponseHelper.success(result, 'Password changed successfully');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          user: {
+            id: '507f1f77bcf86cd799439011',
+            username: 'johndoe',
+            email: 'user@example.com',
+            role: 'student',
+            createdAt: '2025-10-07T10:30:00.000Z',
+            updatedAt: '2025-10-07T10:30:00.000Z',
+          },
+          message: 'Profile updated successfully',
+        },
+        message: 'Profile updated successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Email already exists',
+    schema: {
+      example: {
+        success: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Email already exists',
+        },
+      },
+    },
+  })
+  async updateProfile(
+    @CurrentUser() user: IUser,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    const result = await this.authService.updateProfile(
+      user.id,
+      updateProfileDto,
+    );
+    return ResponseHelper.success(result, 'Profile updated successfully');
   }
 }
