@@ -88,12 +88,6 @@ export default function CreateTeacherExamPage() {
 
   const totalQuestions = useMemo(() => questions.length, [questions])
 
-  useEffect(() => {
-    if (!user?.id) {
-      void getUser()
-    }
-  }, [user?.id, getUser])
-
   const courseOptions = useMemo<SelectOption[]>(() => {
     const courses = teacherCoursesData?.data.courses ?? []
     return courses.map((course) => ({

@@ -11,13 +11,14 @@ import { resolveActiveSidebarItem } from '@/utils/navigation'
 export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   className = '',
+  initialActiveItem = 'dashboard',
   hasNotification = false
 }) => {
   const router = useRouter()
   const pathname = usePathname()
   const { user } = useAuth()
   const [activeItem, setActiveItem] = useState<string | null>(() => {
-    return resolveActiveSidebarItem(pathname) ?? null
+    return resolveActiveSidebarItem(pathname) ?? initialActiveItem ?? null
   })
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
@@ -30,26 +31,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     router.push('/')
   }
 
-  const handleSidebarItemClick = (itemId: string) => {
+  const handleSidebarItemClick = (itemId: string, itemHref: string) => {
     setActiveItem(itemId)
-    let url = '/'
-    switch (itemId) {
-      case 'dashboard':
-        url = `/dashboard/${user?.role === 'teacher' ? 'teacher' : 'student'}/`
-        break
-      case 'courses':
-        url = `/dashboard/${
-          user?.role === 'teacher' ? 'teacher' : 'student'
-        }/courses`
-        break
-      case 'students':
-        url = '/students'
-        break
-      default:
-        url = '/'
-        break
-    }
-    router.push(url)
+    router.push(itemHref)
   }
 
   const toggleSidebar = () => {
