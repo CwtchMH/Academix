@@ -8,7 +8,13 @@ import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as argon2 from 'argon2';
 import { User, UserDocument } from '../../database/schemas/user.schema';
-import { LoginDto, RegisterDto, RefreshTokenDto } from './dto/auth.dto';
+import {
+  LoginDto,
+  RegisterDto,
+  RefreshTokenDto,
+  ChangePasswordDto,
+  UpdateProfileDto,
+} from './dto/auth.dto';
 import { IJwtPayload, IUserProfile } from '../../common/interfaces';
 
 @Injectable()
@@ -126,6 +132,106 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
     return this.sanitizeUser(user);
+  }
+
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
+    const { currentPassword, newPassword } = changePasswordDto;
+
+    // Find user with password hash
+    const user = await this.userModel.findById(userId).select('+passwordHash');
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await argon2.verify(
+      user.passwordHash,
+      currentPassword,
+    );
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    // Check if new password is different from current password
+    const isSamePassword = await argon2.verify(user.passwordHash, newPassword);
+    if (isSamePassword) {
+      throw new ConflictException(
+        'New password must be different from current password',
+      );
+    }
+
+    // Hash new password
+    const newPasswordHash = await argon2.hash(newPassword);
+
+    // Update password and clear refresh token for security
+    await this.userModel.findByIdAndUpdate(userId, {
+      passwordHash: newPasswordHash,
+      refreshTokenHash: undefined, // Clear refresh token to force re-login
+    });
+
+    return { message: 'Password changed successfully' };
+  }
+
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    const { fullName, email, dateOfBirth } = updateProfileDto;
+
+    // Check if email is being updated and if it already exists
+    if (email) {
+      const existingUser = await this.userModel.findOne({
+        email,
+        _id: { $ne: userId },
+      });
+      if (existingUser) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    // Prepare update object with only provided fields
+    const updateData: Partial<{
+      fullName: string;
+      email: string;
+      dateOfBirth: Date;
+    }> = {};
+    if (fullName !== undefined) updateData.fullName = fullName;
+    if (email !== undefined) updateData.email = email;
+    if (dateOfBirth !== undefined)
+      updateData.dateOfBirth = new Date(dateOfBirth);
+
+    // Update user profile
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedUser) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      user: this.sanitizeUser(updatedUser),
+      message: 'Profile updated successfully',
+    };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      user: {
+        id: String(user._id),
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        fullName: user.fullName ?? null,
+        dateOfBirth: user.dateOfBirth ?? null,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    };
   }
 
   private async generateTokens(

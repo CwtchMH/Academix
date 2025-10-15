@@ -1,4 +1,11 @@
-import { IsEmail, IsString, MinLength, IsEnum } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  IsEnum,
+  IsOptional,
+  IsDateString,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
@@ -52,4 +59,52 @@ export class RefreshTokenDto {
   @IsString()
   @MinLength(10)
   refreshToken: string;
+}
+
+export class ChangePasswordDto {
+  @ApiProperty({
+    example: 'currentPassword123',
+    description: 'Current password for verification',
+  })
+  @IsString()
+  @MinLength(6)
+  currentPassword: string;
+
+  @ApiProperty({
+    example: 'newPassword123',
+    description: 'New password (minimum 6 characters)',
+  })
+  @IsString()
+  @MinLength(6)
+  newPassword: string;
+}
+
+export class UpdateProfileDto {
+  @ApiProperty({
+    example: 'John Doe',
+    description: 'Full name of the user',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  fullName?: string;
+
+  @ApiProperty({
+    example: 'user@example.com',
+    description: 'Email address of the user',
+    required: false,
+  })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiProperty({
+    example: '1990-01-15',
+    description: 'Date of birth in YYYY-MM-DD format',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
 }
