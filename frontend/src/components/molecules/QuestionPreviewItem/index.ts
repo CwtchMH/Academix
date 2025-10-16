@@ -1,2 +1,5 @@
 export { QuestionPreviewItem } from './QuestionPreviewItem'
-export type { QuestionPreviewItemProps } from './QuestionPreviewItem.types'
+export type {
+  QuestionPreviewItemProps,
+  QuestionPreviewChoice
+} from './QuestionPreviewItem.types'

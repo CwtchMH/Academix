@@ -31,7 +31,7 @@ const teacherMenuItems = [
     id: 'dashboard',
     label: 'Dashboard',
     icon: <Icon name="dashboard" />,
-    href: '/dashboard'
+    href: '/dashboard/teacher/'
   },
   {
     id: 'courses',

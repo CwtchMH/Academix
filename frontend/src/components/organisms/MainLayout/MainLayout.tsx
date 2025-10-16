@@ -16,7 +16,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 }) => {
   const router = useRouter()
   const pathname = usePathname()
-  const { user } = useAuth()
   const [activeItem, setActiveItem] = useState<string | null>(() => {
     return resolveActiveSidebarItem(pathname) ?? initialActiveItem ?? null
   })

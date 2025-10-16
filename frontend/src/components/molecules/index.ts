@@ -15,5 +15,8 @@ export type { NavbarProps } from './Navbar'
 export type { SidebarProps } from './Sidebar'
 export type { UserDropdownProps } from './UserDropdown'
 export type { StatCardProps } from './StatCard'
-export type { QuestionPreviewItemProps } from './QuestionPreviewItem'
-export type { CourseCardProps, CourseStatus } from './CourseCard'
+export type {
+  QuestionPreviewItemProps,
+  QuestionPreviewChoice
+} from './QuestionPreviewItem'
+export type { CourseCardProps } from './CourseCard'

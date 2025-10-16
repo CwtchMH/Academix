@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { App, Form, Radio } from 'antd'
+import { App, Form, Modal, Radio } from 'antd'
 import {
   Button,
   Icon,
@@ -80,6 +80,8 @@ export default function CreateTeacherExamPage() {
     null
   )
   const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false)
+  const [questionPendingDeletion, setQuestionPendingDeletion] =
+    useState<ExamQuestion | null>(null)
   const [form] = Form.useForm<{
     prompt: string
     choices: { text: string }[]
@@ -300,13 +302,39 @@ export default function CreateTeacherExamPage() {
     )
   }
 
-  const handleDeleteQuestion = (questionId: string) => {
+  const handleRequestDeleteQuestion = (questionId: string) => {
+    const targetQuestion = questions.find(
+      (question) => question.id === questionId
+    )
+    if (!targetQuestion) {
+      return
+    }
+    setQuestionPendingDeletion(targetQuestion)
+  }
+
+  const handleConfirmDeleteQuestion = () => {
+    if (!questionPendingDeletion) {
+      return
+    }
+
+    const questionId = questionPendingDeletion.id
+
     setQuestions((prev) =>
       prev.filter((question) => question.id !== questionId)
     )
+
     if (editingQuestionId === questionId) {
       resetBuilder()
     }
+
+    setExpandedQuestionId((prev) => (prev === questionId ? null : prev))
+
+    setQuestionPendingDeletion(null)
+    message.success('Question removed from preview')
+  }
+
+  const handleCancelDeleteQuestion = () => {
+    setQuestionPendingDeletion(null)
   }
 
   const handleToggleExpand = (questionId: string) => {
@@ -519,8 +547,15 @@ export default function CreateTeacherExamPage() {
                           key={question.id}
                           index={index + 1}
                           question={question.prompt}
+                          choices={question.choices.map((choice) => ({
+                            id: choice.id,
+                            label: choice.text,
+                            isCorrect: choice.id === question.correctChoiceId
+                          }))}
                           onEdit={() => handleEditQuestion(question)}
-                          onDelete={() => handleDeleteQuestion(question.id)}
+                          onDelete={() =>
+                            handleRequestDeleteQuestion(question.id)
+                          }
                           onToggleCollapse={() =>
                             handleToggleExpand(question.id)
                           }
@@ -542,6 +577,25 @@ export default function CreateTeacherExamPage() {
           </section>
         </div>
       </div>
+
+      <Modal
+        open={Boolean(questionPendingDeletion)}
+        title="Remove question"
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
+        onOk={handleConfirmDeleteQuestion}
+        onCancel={handleCancelDeleteQuestion}
+      >
+        <p className="text-sm text-slate-600">
+          Are you sure you want to remove this question from the preview?
+        </p>
+        {questionPendingDeletion ? (
+          <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+            {questionPendingDeletion.prompt}
+          </p>
+        ) : null}
+      </Modal>
 
       <FinalizeExamModal
         open={isFinalizeModalOpen}
