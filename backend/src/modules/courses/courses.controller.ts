@@ -39,6 +39,7 @@ export class CoursesController {
         data: {
           course: {
             id: '652fd6a7e5a69c0012345678',
+            publicId: 'C123456',
             courseName: 'Algebra Basics',
             teacherId: '652fd6a7e5a69c0012344321',
             enrollmentCount: 0,
@@ -70,6 +71,7 @@ export class CoursesController {
           courses: [
             {
               id: '652fd6a7e5a69c0012345678',
+              publicId: 'C123456',
               courseName: 'Algebra Basics',
               teacherId: '652fd6a7e5a69c0012344321',
               enrollmentCount: 42,

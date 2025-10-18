@@ -422,8 +422,8 @@ export default function CreateTeacherExamPage() {
           </Button>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-1">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">
                 Question Builder
@@ -512,7 +512,7 @@ export default function CreateTeacherExamPage() {
             </Form>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-3">
             <div className="flex flex-col gap-6">
               <div className="space-y-2">
                 <label

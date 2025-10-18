@@ -171,6 +171,9 @@ export class CourseResponseDto {
   @ApiProperty({ description: 'Course ID' })
   id: string;
 
+  @ApiProperty({ description: 'Public course identifier', example: 'C123456' })
+  publicId: string;
+
   @ApiProperty({ description: 'Title of the course' })
   title: string;
 
@@ -243,6 +246,9 @@ export class CreateBasicCourseDto {
 export class CourseBasicResponseDto {
   @ApiProperty({ description: 'Course ID' })
   id: string;
+
+  @ApiProperty({ description: 'Public course identifier', example: 'C123456' })
+  publicId: string;
 
   @ApiProperty({ description: 'Name of the course' })
   courseName: string;

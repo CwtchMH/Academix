@@ -93,7 +93,7 @@ export default function TeacherDashboardPage() {
     return exams.map((exam) => {
       return {
         id: exam.id,
-        code: exam.id,
+        code: exam.publicId,
         status: normalizeStatus(exam.status),
         startTime: formatDateTime(exam.startTime),
         endTime: formatDateTime(exam.endTime)

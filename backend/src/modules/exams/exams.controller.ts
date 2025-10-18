@@ -41,6 +41,7 @@ export class ExamsController {
           exams: [
             {
               id: '652fd6a7e5a69c0012345678',
+              publicId: 'E123456',
               status: 'active',
               startTime: '2025-11-12T01:00:00.000Z',
               endTime: '2025-11-12T02:30:00.000Z',

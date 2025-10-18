@@ -8,6 +8,12 @@ export class ExamSummaryDto {
   id: string;
 
   @ApiProperty({
+    description: 'Public exam identifier',
+    example: 'E123456',
+  })
+  publicId: string;
+
+  @ApiProperty({
     description: 'Current status of the exam calculated from its schedule',
     enum: ['scheduled', 'active', 'completed'],
     example: 'active',

@@ -10,6 +10,7 @@ import { Question } from '../database/schemas/question.schema';
 import { Exam } from '../database/schemas/exam.schema';
 import { Submission } from '../database/schemas/submission.schema';
 import { Certificate } from '../database/schemas/certificate.schema';
+import { generatePrefixedPublicId } from '../common/utils/public-id.util';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -97,11 +98,11 @@ async function bootstrap() {
       },
     ]);
 
-    const [admin, teacher1, teacher2, student1, student2, student3] = users;
+    const [, teacher1, teacher2, student1, student2, student3] = users;
 
     // Create sample courses
     console.log('📚 Creating sample courses...');
-    const courses = await courseModel.insertMany([
+    const courseSeedData = [
       {
         courseName: 'Introduction to Computer Science',
         teacherId: teacher1._id,
@@ -118,7 +119,15 @@ async function bootstrap() {
         courseName: 'Data Structures and Algorithms',
         teacherId: teacher2._id,
       },
-    ]);
+    ];
+
+    const courseDocuments = [] as Array<Record<string, unknown>>;
+    for (const payload of courseSeedData) {
+      const publicId = await generatePrefixedPublicId('C', courseModel);
+      courseDocuments.push({ ...payload, publicId });
+    }
+
+    const courses = await courseModel.insertMany(courseDocuments);
 
     const [course1, course2, course3, course4] = courses;
 
@@ -195,9 +204,8 @@ async function bootstrap() {
 
     // Create sample exams
     console.log('📋 Creating sample exams...');
-    const exams = await examModel.insertMany([
+    const examSeedData = [
       {
-        examCode: 'CS101-MIDTERM',
         title: 'Computer Science Midterm Exam',
         durationMinutes: 90,
         startTime: new Date('2025-10-15T09:00:00Z'),
@@ -208,7 +216,6 @@ async function bootstrap() {
         rateScore: 70,
       },
       {
-        examCode: 'WEB101-FINAL',
         title: 'Web Development Final Exam',
         durationMinutes: 120,
         startTime: new Date('2025-11-20T14:00:00Z'),
@@ -219,7 +226,6 @@ async function bootstrap() {
         rateScore: 75,
       },
       {
-        examCode: 'DB101-QUIZ',
         title: 'Database Quiz 1',
         durationMinutes: 45,
         startTime: new Date('2025-09-25T10:00:00Z'),
@@ -229,9 +235,17 @@ async function bootstrap() {
         questions: [questions[3]._id, questions[4]._id],
         rateScore: 80,
       },
-    ]);
+    ];
 
-    const [exam1, exam2, exam3] = exams;
+    const examDocuments = [] as Array<Record<string, unknown>>;
+    for (const payload of examSeedData) {
+      const publicId = await generatePrefixedPublicId('E', examModel);
+      examDocuments.push({ ...payload, publicId });
+    }
+
+    const exams = await examModel.insertMany(examDocuments);
+
+    const [exam1, , exam3] = exams;
 
     // Create sample submissions
     console.log('📤 Creating sample submissions...');
