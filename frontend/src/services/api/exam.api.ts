@@ -51,6 +51,7 @@ export interface ExamEntity {
 
 export interface ExamSummaryEntity {
   id: string
+  publicId: string
   status: string
   startTime: string
   endTime: string

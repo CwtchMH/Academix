@@ -7,7 +7,7 @@ import type { CourseCardProps } from './CourseCard.types'
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   courseName,
-  courseId,
+  publicId,
   teacherName,
   teacherId,
   enrollmentCount
@@ -15,7 +15,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const { message } = App.useApp()
 
   const handleCopyCourseId = () => {
-    if (!courseId) return
+    if (!publicId) return
 
     if (!navigator?.clipboard) {
       message.error('Clipboard access is not available in this browser.')
@@ -23,7 +23,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     }
 
     navigator.clipboard
-      .writeText(courseId)
+      .writeText(publicId)
       .then(() => message.success('Course ID copied to clipboard'))
       .catch(() => message.error('Failed to copy course ID'))
   }
@@ -35,7 +35,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="truncate text-sm text-slate-500">
             Course ID:{' '}
-            <span className="font-mono text-slate-600">{courseId}</span>
+            <span className="font-mono text-slate-600">{publicId}</span>
           </p>
           <Button
             variant="outline"

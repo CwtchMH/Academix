@@ -20,6 +20,7 @@ import {
 import { ExamResponseDto } from './dto/exam-response.dto';
 import { ExamSummaryDto } from './dto/exam-summary.dto';
 import { IUser } from '../../common/interfaces';
+import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
 
 @Injectable()
 export class ExamsService {
@@ -88,6 +89,7 @@ export class ExamsService {
     session.startTransaction();
 
     try {
+      const publicId = await generatePrefixedPublicId('E', this.examModel);
       const createdQuestions = await this.questionModel.insertMany(
         normalizedQuestions,
         { session },
@@ -98,6 +100,7 @@ export class ExamsService {
       const [examDoc] = await this.examModel.create(
         [
           {
+            publicId,
             title: createExamDto.title,
             durationMinutes: createExamDto.durationMinutes,
             startTime,
@@ -126,12 +129,13 @@ export class ExamsService {
     const now = new Date();
 
     const exams = await this.examModel
-      .find({}, { startTime: 1, endTime: 1 })
+      .find({}, { publicId: 1, startTime: 1, endTime: 1 })
       .sort({ startTime: 1 })
       .exec();
 
     return exams.map((exam) => ({
       id: String(exam._id),
+      publicId: exam.publicId,
       status: this.computeExamStatus(now, exam.startTime, exam.endTime),
       startTime: exam.startTime,
       endTime: exam.endTime,
@@ -211,6 +215,7 @@ export class ExamsService {
   ): ExamResponseDto {
     return {
       id: String(exam._id),
+      publicId: exam.publicId,
       title: exam.title,
       durationMinutes: exam.durationMinutes,
       startTime: exam.startTime,

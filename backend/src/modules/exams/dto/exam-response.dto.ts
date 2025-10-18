@@ -12,6 +12,7 @@ export interface ExamQuestionResponseDto {
 
 export interface ExamResponseDto {
   id: string;
+  publicId: string;
   title: string;
   durationMinutes: number;
   startTime: Date;

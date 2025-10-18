@@ -12,6 +12,7 @@ import {
   EnrollmentDocument,
 } from '../../database/schemas/enrollment.schema';
 import { CreateBasicCourseDto, CourseBasicResponseDto } from './dto/course.dto';
+import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
 
 @Injectable()
 export class CoursesService {
@@ -37,13 +38,15 @@ export class CoursesService {
       throw new ForbiddenException('Only teachers can create courses');
     }
 
+    const publicId = await generatePrefixedPublicId('C', this.courseModel);
     const course = new this.courseModel({
       courseName,
       teacherId: new Types.ObjectId(teacherId),
+      publicId,
     });
 
     const savedCourse = await course.save();
-    return this.mapCourse(savedCourse, 0);
+    return this.mapCourse(savedCourse, 0, teacher.fullName);
   }
 
   async getCoursesByTeacher(
@@ -95,6 +98,7 @@ export class CoursesService {
   ): CourseBasicResponseDto {
     return {
       id: String(course._id),
+      publicId: course.publicId,
       courseName: course.courseName,
       teacherId: String(course.teacherId),
       enrollmentCount,

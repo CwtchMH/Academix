@@ -9,6 +9,7 @@ export interface CreateCourseRequest {
 export interface CourseEntity {
   id: string
   courseName: string
+  publicId: string
   teacherId: string
   enrollmentCount: number
   createdAt: string

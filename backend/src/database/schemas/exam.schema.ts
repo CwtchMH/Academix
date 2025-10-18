@@ -5,6 +5,15 @@ export type ExamDocument = Exam & Document;
 
 @Schema({ timestamps: true })
 export class Exam {
+  @Prop({
+    required: true,
+    unique: true,
+    index: true,
+    immutable: true,
+    match: /^E\d{6}$/,
+  })
+  publicId: string;
+
   @Prop({ required: true })
   title: string;
 

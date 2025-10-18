@@ -18,7 +18,7 @@ const CoursesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdCourseInfo, setCreatedCourseInfo] = useState<{
-    id: string
+    publicId: string
     name: string
   } | null>(null)
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
@@ -39,7 +39,7 @@ const CoursesPage: React.FC = () => {
     if (!normalizedSearch) return courses
     return courses.filter((course) => {
       const courseName = course.courseName?.toLowerCase() ?? ''
-      const courseId = course.id?.toLowerCase() ?? ''
+      const courseId = course.publicId?.toLowerCase() ?? ''
       return (
         courseName.includes(normalizedSearch) ||
         courseId.includes(normalizedSearch)
@@ -56,7 +56,7 @@ const CoursesPage: React.FC = () => {
   }
 
   const handleCopyCourseId = () => {
-    if (!createdCourseInfo?.id) return
+    if (!createdCourseInfo?.publicId) return
 
     if (!navigator?.clipboard) {
       message.error('Clipboard access is not available in this browser.')
@@ -64,7 +64,7 @@ const CoursesPage: React.FC = () => {
     }
 
     navigator.clipboard
-      .writeText(createdCourseInfo.id)
+      .writeText(createdCourseInfo.publicId)
       .then(() => message.success('Course ID copied to clipboard'))
       .catch(() => message.error('Failed to copy course ID'))
   }
@@ -99,7 +99,10 @@ const CoursesPage: React.FC = () => {
       const { course } = response.data
 
       setIsModalOpen(false)
-      setCreatedCourseInfo({ id: course.id, name: course.courseName })
+      setCreatedCourseInfo({
+        publicId: course.publicId,
+        name: course.courseName
+      })
       setIsSuccessModalOpen(true)
       message.success(response.message ?? 'Course created successfully')
       await refetch()
@@ -175,7 +178,7 @@ const CoursesPage: React.FC = () => {
                 <CourseCard
                   key={course.id}
                   courseName={course.courseName}
-                  courseId={course.id}
+                  publicId={course.publicId}
                   teacherId={course.teacherId}
                   teacherName={course.teacherName}
                   enrollmentCount={course.enrollmentCount}
@@ -220,7 +223,7 @@ const CoursesPage: React.FC = () => {
           </div>
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <code className="truncate font-mono text-sm text-slate-700">
-              {createdCourseInfo?.id}
+              {createdCourseInfo?.publicId}
             </code>
             <Button variant="outline" size="small" onClick={handleCopyCourseId}>
               Copy ID
