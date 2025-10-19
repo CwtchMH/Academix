@@ -20,6 +20,9 @@ export class User {
   @Prop({ type: Date })
   dateOfBirth?: Date;
 
+  @Prop({ type: String, trim: true })
+  imageUrl?: string;
+
   @Prop({
     type: String,
     enum: ['student', 'teacher', 'admin'],

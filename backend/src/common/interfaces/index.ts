@@ -5,6 +5,7 @@ export interface IUser {
   passwordHash: string;
   fullName?: string;
   dateOfBirth?: Date;
+  imageUrl?: string;
   role: 'student' | 'teacher' | 'admin';
   walletAddress?: string;
   refreshTokenHash?: string;
@@ -17,12 +18,11 @@ export interface IUserProfile {
   username: string;
   email: string;
   role: 'student' | 'teacher' | 'admin';
+  fullName?: string;
+  dateOfBirth?: Date;
+  imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface IRequestWithUser extends Request {
-  user: IUser;
 }
 
 export interface IJwtPayload {
@@ -32,7 +32,6 @@ export interface IJwtPayload {
   iat?: number;
   exp?: number;
 }
-
 export interface IApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -48,4 +47,9 @@ export interface IApiResponse<T = any> {
     total?: number;
     timestamp: string;
   };
+}
+
+import type { Request } from 'express';
+export interface IRequestWithUser extends Request {
+  user: IUser;
 }
