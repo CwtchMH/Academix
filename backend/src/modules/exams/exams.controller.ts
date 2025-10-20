@@ -20,6 +20,9 @@ import { ApiResponseDto, ResponseHelper } from '../../common/dto/response.dto';
 import { Roles } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import type { IUser } from '../../common/interfaces';
+import { JoinExamResponseDto } from './dto/exam-response.dto';
+import { JoinExamDto } from './dto/join-exam.dto';
+import type { UserDocument } from 'src/database/schemas/user.schema';
 
 @ApiTags('Exams')
 @ApiBearerAuth()
@@ -152,5 +155,23 @@ export class ExamsController {
   ) {
     const exam = await this.examsService.createExam(createExamDto, user);
     return ResponseHelper.success({ exam }, 'Exam created successfully');
+  }
+
+  @Post('join')
+  @Roles('student')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Student joins an exam by code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Exam found and user is authorized.',
+    type: JoinExamResponseDto,
+  })
+  @ApiResponse({ status: 403, description: 'User not enrolled in the course.' })
+  @ApiResponse({ status: 404, description: 'Exam not found.' })
+  async joinExam(
+    @Body() joinExamDto: JoinExamDto,
+    @CurrentUser() user: UserDocument,
+  ): Promise<JoinExamResponseDto> {
+    return this.examsService.joinExam(joinExamDto, user);
   }
 }

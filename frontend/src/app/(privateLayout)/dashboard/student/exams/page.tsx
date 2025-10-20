@@ -3,11 +3,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
 import { JoinExamModal } from '@/components/molecules/JoinExamModal/JoinExamModal';
 import { ExamCard } from '@/components/molecules/ExamCard/ExamCard';
 import { ConfirmStartExamModal } from '@/components/molecules/ConfirmStartExamModal/ConfirmStartExamModal';
-import type { Exam } from './types/exam.types';
+import type { Exam, JoinExamResponseDto } from '@/services/types/api.types';
 
 export default function ExamsPage() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -17,7 +16,20 @@ export default function ExamsPage() {
   const [upcomingExams, setUpcomingExams] = useState<Exam[]>([]);
   const router = useRouter();
 
-  const handleJoinSuccess = (newExam: Exam) => {
+  // MAPPING DỮ LIỆU
+  // Hàm này được gọi khi API call trong modal thành công
+  const handleJoinSuccess = (apiData: JoinExamResponseDto) => {
+    
+    // Biến đổi DTO từ backend thành object 'Exam' của frontend
+    const newExam: Exam = {
+      id: apiData.publicId, // Dùng publicId làm id
+      title: apiData.title,
+      courseCode: apiData.course.publicId, // Dùng publicId của course
+      durationInMinutes: apiData.durationMinutes,
+      startTime: new Date(apiData.startTime), // Convert string thành Date
+    };
+
+    // Thêm bài thi mới vào danh sách (tránh trùng lặp)
     if (!upcomingExams.find(exam => exam.id === newExam.id)) {
       setUpcomingExams(prevExams => [...prevExams, newExam]);
     }
@@ -30,9 +42,9 @@ export default function ExamsPage() {
 
   const handleConfirmStart = () => {
     if (!selectedExam) return;
-
     console.log(`Starting exam: ${selectedExam.title} (ID: ${selectedExam.id})`);
-    router.push(`/exams/${selectedExam.id}/take`);
+    // 'selectedExam.id' bây giờ chính là publicId (E123456)
+    router.push(`/exams/${selectedExam.id}/take`); 
 
     setIsConfirmModalOpen(false);
     setSelectedExam(null);

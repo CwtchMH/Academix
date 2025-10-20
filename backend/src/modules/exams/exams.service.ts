@@ -17,10 +17,14 @@ import {
   CreateExamQuestionDto,
   ExamStatus,
 } from './dto/create-exam.dto';
-import { ExamResponseDto } from './dto/exam-response.dto';
+import { ExamResponseDto, JoinExamResponseDto } from './dto/exam-response.dto';
 import { ExamSummaryDto } from './dto/exam-summary.dto';
 import { IUser } from '../../common/interfaces';
 import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
+
+import { UserDocument } from '../../database/schemas/user.schema';
+import { JoinExamDto } from './dto/join-exam.dto';
+import { log } from 'console';
 
 @Injectable()
 export class ExamsService {
@@ -33,6 +37,9 @@ export class ExamsService {
     private readonly courseModel: Model<CourseDocument>,
     @InjectConnection()
     private readonly connection: Connection,
+
+    // @InjectModel(Enrollment.name)
+    // private enrollmentModel: Model<EnrollmentDocument>,
   ) {}
 
   async createExam(
@@ -251,5 +258,52 @@ export class ExamsService {
     }
 
     return 'active';
+  }
+
+  /**
+   * Allows a student to join (find and validate) an exam using a public code.
+   * @param joinExamDto DTO containing the publicId
+   * @param user The authenticated student
+   * @returns The validated exam details for the exam card
+   */
+  async joinExam(
+    joinExamDto: JoinExamDto,
+    user: UserDocument,
+  ): Promise<JoinExamResponseDto> {
+    const { publicId } = joinExamDto;
+    const studentId = user._id;
+    log('Student attempting to join exam:', publicId, 'User ID:', studentId);
+
+    // --- Validation 1: Find the exam and its course ---
+    const exam = await this.examModel
+      .findOne({ publicId })
+      .populate('courseId'); // Populate thông tin của Course
+
+    if (!exam) {
+      throw new NotFoundException('Exam with this code not found.');
+    }
+
+    // --- Validation 2: Check exam status ---
+    if (exam.status !== 'draft') {
+      throw new BadRequestException('This exam is not active.');
+    }
+    if (exam.endTime < new Date()) {
+      throw new BadRequestException('This exam has already ended.');
+    }
+
+    // // --- Validation 3: Check if student is enrolled in the course ---
+    // const enrollment = await this.enrollmentModel.findOne({
+    //   studentId: studentId,
+    //   courseId: (exam.courseId as unknown as CourseDocument)._id,
+    // });
+
+    // if (!enrollment) {
+    //   throw new ForbiddenException(
+    //     'You are not enrolled in the course required for this exam.',
+    //   );
+    // }
+
+    // --- Success ---
+    return new JoinExamResponseDto(exam);
   }
 }

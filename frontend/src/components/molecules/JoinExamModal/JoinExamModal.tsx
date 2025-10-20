@@ -1,47 +1,78 @@
 // src/components/molecules/JoinExamModal.tsx
 'use client';
 
-import { useEffect } from 'react';
-import type { Exam } from '@/app/(privateLayout)/dashboard/student/exams/types/exam.types';
+import { useEffect, useState } from 'react';
+import { ExamService } from '@/services';
+import type { JoinExamResponseDto } from '@/services/types/api.types';
+import type { AxiosError } from 'axios';
 
 interface JoinExamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onJoinSuccess: (examData: Exam) => void;
+  onJoinSuccess: (examData: JoinExamResponseDto) => void;
 }
 
-const mockExamData: Exam = {
-  id: 'cs101',
-  title: 'Introduction to Computer Science',
-  courseCode: 'CS101',
-  durationInMinutes: 90,
-  startTime: new Date('2025-12-25T10:00:00'),
-};
+interface ErrorResponse {
+  message: string | string[];
+}
 
-export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess}: JoinExamModalProps) => {
+export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess }: JoinExamModalProps) => {
+  const [examCode, setExamCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // ⭐️ 4. Sử dụng usePost hook từ ExamService (đã bao gồm React Query)
+  const { mutate: joinExam, isPending } = ExamService.usePost<JoinExamResponseDto>(
+    {
+      // `url` này sẽ được nối với `EXAM_SERVICE_ENDPOINT`
+      // (ví dụ: /exams) -> /exams/join
+      url: '/join',
+    },
+    {
+      // ⭐️ 5. Cấu hình callbacks cho mutation
+      onSuccess: (data) => {
+        // data ở đây chính là JoinExamResponseDto
+        onJoinSuccess(data);
+        onClose();
+      },
+      // onError: (err: AxiosError<ErrorResponse>) => {
+      //   // Xử lý lỗi từ API
+      //   const message = err.response?.data?.message || 'An unknown error occurred.';
+      //   if (Array.isArray(message)) {
+      //     setError(message.join(', '));
+      //   } else {
+      //     setError(message);
+      //   }
+      // },
+    }
+  );
+
+  // Reset form khi modal được mở
+  useEffect(() => {
+    if (isOpen) {
+      setExamCode('');
+      setError(null);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
+      if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleEsc);
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-    };
+    return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
   const handleJoinExam = () => {
-    // call API
-    // Nếu API thành công, gọi onJoinSuccess với data trả về.
-    console.log("Joining exam...");
-    onJoinSuccess(mockExamData);
-    onClose();
+    setError(null); // Xóa lỗi cũ
+    // Hook usePost của bạn yêu cầu data phải nằm trong object { data: ... }
+    joinExam({
+      data: {
+        publicId: examCode,
+      },
+    });
   };
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
     <>
@@ -56,20 +87,20 @@ export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess}: JoinExamModalPr
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
         className="fixed inset-0 z-50 flex items-center justify-center"
       >
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4 transform transition-all">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4">
           <div className="p-8">
             <div className="flex items-start justify-between">
-              <h2 id="modal-title" className="text-2xl font-bold text-[var(--dark-text)]">
+              <h2 className="text-2xl font-bold text-[var(--dark-text)]">
                 Join Exam
               </h2>
               <button
                 onClick={onClose}
                 className="text-[var(--medium-text)] hover:text-[var(--dark-text)] p-1 rounded-full hover:bg-gray-100"
+                disabled={isPending} // Dùng isPending
               >
-                <span className="material-symbols-outlined">X</span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <div className="mt-6">
@@ -84,21 +115,31 @@ export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess}: JoinExamModalPr
                 name="exam-code"
                 id="exam-code"
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--primary-color)] focus:ring-1 focus:ring-[var(--primary-color)] sm:text-base p-3"
-                placeholder="Enter the exam code"
+                placeholder="Enter the exam code (e.g., E123456)"
+                value={examCode}
+                onChange={(e) => setExamCode(e.target.value)}
+                disabled={isPending} // ⭐️ 7. Dùng isPending
               />
+              {/* Hiển thị lỗi API */}
+              {error && (
+                <p className="mt-2 text-sm text-red-600">{error}</p>
+              )}
             </div>
           </div>
           <div className="bg-gray-50 px-8 py-4 flex justify-end gap-3 rounded-b-lg">
             <button
               onClick={onClose}
               className="btn-secondary px-6 py-2 text-sm font-semibold rounded-md shadow-sm"
+              disabled={isPending}
             >
               Cancel
             </button>
             <button
               onClick={handleJoinExam}
-              className="btn-primary px-6 py-2 text-sm font-semibold rounded-md shadow-sm">
-              Join Exam
+              className="btn-primary px-6 py-2 text-sm font-semibold rounded-md shadow-sm disabled:opacity-50"
+              disabled={isPending || examCode.length === 0}
+            >
+              {isPending ? 'Joining...' : 'Join Exam'}
             </button>
           </div>
         </div>
