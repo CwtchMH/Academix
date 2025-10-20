@@ -1,56 +1,58 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { Dropdown } from 'antd'
-import type { MenuProps } from 'antd'
-import { useRouter } from 'next/navigation'
-import { Avatar } from '@/components/atoms'
-import { useAuth } from '@/stores/auth'
-import { clearAuth } from '@/services/utils/auth.utils'
-import { LogoutOutlined, UserOutlined } from '@ant-design/icons'
+import React from "react";
+import { Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import { useRouter } from "next/navigation";
+import { Avatar } from "@/components/atoms";
+import { useAuth } from "@/stores/auth";
+import { clearAuth } from "@/services/utils/auth.utils";
+import { LogoutOutlined, UserOutlined } from "@ant-design/icons";
 
 export const UserDropdown: React.FC = () => {
-  const router = useRouter()
-  const { user, clearUser } = useAuth()
+  const router = useRouter();
+  const { user, clearUser } = useAuth();
 
   const handleLogout = () => {
-    clearAuth()
-    clearUser()
-    router.push('/login')
-  }
+    clearAuth();
+    clearUser();
+    router.push("/login");
+  };
 
   const handleProfile = () => {
-    router.push('/profile')
-  }
+    router.push("/profile");
+  };
 
-  const menuItems: MenuProps['items'] = [
+  const menuItems: MenuProps["items"] = [
     {
-      key: 'profile',
-      label: 'Trang cá nhân',
+      key: "profile",
+      label: "Trang cá nhân",
       icon: <UserOutlined />,
-      onClick: handleProfile
+      onClick: handleProfile,
     },
     {
-      type: 'divider'
+      type: "divider",
     },
     {
-      key: 'logout',
-      label: 'Đăng xuất',
+      key: "logout",
+      label: "Đăng xuất",
       icon: <LogoutOutlined />,
       onClick: handleLogout,
-      danger: true
-    }
-  ]
+      danger: true,
+    },
+  ];
 
   // Generate avatar URL from user email
-  const avatarSrc = user?.email
+  const avatarSrc = user?.imageUrl
+    ? user?.imageUrl
+    : user?.email
     ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-    : undefined
+    : undefined;
 
   return (
     <Dropdown
       menu={{ items: menuItems }}
-      trigger={['click']}
+      trigger={["click"]}
       placement="bottomRight"
       arrow
     >
@@ -58,5 +60,5 @@ export const UserDropdown: React.FC = () => {
         <Avatar src={avatarSrc} size="medium" />
       </div>
     </Dropdown>
-  )
-}
+  );
+};

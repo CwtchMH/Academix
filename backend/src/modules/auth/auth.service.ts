@@ -15,7 +15,7 @@ import {
   ChangePasswordDto,
   UpdateProfileDto,
 } from './dto/auth.dto';
-import { IJwtPayload, IUserProfile } from '../../common/interfaces';
+import type { IJwtPayload, IUserProfile } from '../../common/interfaces';
 
 @Injectable()
 export class AuthService {
@@ -94,12 +94,11 @@ export class AuthService {
   async refreshTokens(refreshTokenDto: RefreshTokenDto) {
     const { refreshToken } = refreshTokenDto;
 
-    let payload: IJwtPayload;
-    try {
-      payload = await this.jwtService.verifyAsync<IJwtPayload>(refreshToken);
-    } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
-    }
+    const payload = await this.jwtService
+      .verifyAsync<IJwtPayload>(refreshToken)
+      .catch(() => {
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      });
 
     const user = await this.userModel
       .findById(payload.sub)
@@ -173,7 +172,7 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
-    const { fullName, email, dateOfBirth } = updateProfileDto;
+    const { fullName, email, dateOfBirth, imageUrl } = updateProfileDto;
 
     // Check if email is being updated and if it already exists
     if (email) {
@@ -191,12 +190,13 @@ export class AuthService {
       fullName: string;
       email: string;
       dateOfBirth: Date;
+      imageUrl: string;
     }> = {};
     if (fullName !== undefined) updateData.fullName = fullName;
     if (email !== undefined) updateData.email = email;
     if (dateOfBirth !== undefined)
       updateData.dateOfBirth = new Date(dateOfBirth);
-
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
     // Update user profile
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
@@ -228,6 +228,7 @@ export class AuthService {
         role: user.role,
         fullName: user.fullName ?? null,
         dateOfBirth: user.dateOfBirth ?? null,
+        imageUrl: user.imageUrl ?? null,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -272,6 +273,9 @@ export class AuthService {
       username: user.username,
       email: user.email,
       role: user.role,
+      fullName: user.fullName ?? null,
+      dateOfBirth: user.dateOfBirth ?? undefined,
+      imageUrl: user.imageUrl ?? undefined,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

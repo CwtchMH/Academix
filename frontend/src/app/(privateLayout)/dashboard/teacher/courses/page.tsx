@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { App, Modal, Spin } from 'antd'
 import { Button, Icon, Input } from '@/components/atoms'
 import { CourseCard } from '@/components/molecules'
@@ -8,7 +8,12 @@ import {
   CreateCourseModal,
   type CreateCourseFormValues
 } from '@/components/organisms'
-import { useCreateCourse, useTeacherCourses } from '@/services/api/course.api'
+import {
+  useCreateCourse,
+  useDeleteCourse,
+  useTeacherCourses,
+  type TeacherCourseEntity
+} from '@/services/api/course.api'
 import { useAuth } from '@/stores/auth'
 
 const CoursesPage: React.FC = () => {
@@ -22,8 +27,11 @@ const CoursesPage: React.FC = () => {
     name: string
   } | null>(null)
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
+  const [coursePendingDeletion, setCoursePendingDeletion] =
+    useState<TeacherCourseEntity | null>(null)
 
   const createCourseMutation = useCreateCourse()
+  const deleteCourseMutation = useDeleteCourse()
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useTeacherCourses(user?.id, {
@@ -67,6 +75,41 @@ const CoursesPage: React.FC = () => {
       .writeText(createdCourseInfo.publicId)
       .then(() => message.success('Course ID copied to clipboard'))
       .catch(() => message.error('Failed to copy course ID'))
+  }
+
+  const handleRequestDeleteCourse = (course: TeacherCourseEntity) => {
+    setCoursePendingDeletion(course)
+  }
+
+  const handleCancelDeleteCourse = () => {
+    if (deleteCourseMutation.isPending) {
+      return
+    }
+    setCoursePendingDeletion(null)
+  }
+
+  const handleConfirmDeleteCourse = async () => {
+    if (!coursePendingDeletion) {
+      return
+    }
+
+    try {
+      const response = await deleteCourseMutation.mutateAsync(
+        coursePendingDeletion.id
+      )
+
+      if (!response?.success) {
+        message.error(response?.message ?? 'Failed to delete course')
+        return
+      }
+
+      message.success(response.message ?? 'Course deleted successfully')
+      setCoursePendingDeletion(null)
+      await refetch()
+    } catch (error) {
+      console.error('Delete course failed:', error)
+      message.error('Failed to delete course')
+    }
   }
 
   const handleCreateCourseSubmit = async (
@@ -182,6 +225,11 @@ const CoursesPage: React.FC = () => {
                   teacherId={course.teacherId}
                   teacherName={course.teacherName}
                   enrollmentCount={course.enrollmentCount}
+                  onDelete={() => handleRequestDeleteCourse(course)}
+                  isDeleting={
+                    deleteCourseMutation.isPending &&
+                    coursePendingDeletion?.id === course.id
+                  }
                 />
               ))}
             </div>
@@ -201,6 +249,36 @@ const CoursesPage: React.FC = () => {
         onClose={handleCloseModal}
         onSubmit={handleCreateCourseSubmit}
       />
+
+      <Modal
+        open={Boolean(coursePendingDeletion)}
+        title="Delete course"
+        okText="Delete"
+        cancelText="Cancel"
+        centered
+        okButtonProps={{ danger: true }}
+        onOk={handleConfirmDeleteCourse}
+        onCancel={handleCancelDeleteCourse}
+        confirmLoading={deleteCourseMutation.isPending}
+        maskClosable={false}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this course? This action cannot be
+            undone.
+          </p>
+          {coursePendingDeletion ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+              <p className="font-medium text-slate-900">
+                {coursePendingDeletion.courseName}
+              </p>
+              <p className="mt-1 font-mono text-xs text-slate-500">
+                ID: {coursePendingDeletion.publicId}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </Modal>
 
       <Modal
         open={isSuccessModalOpen}
