@@ -10,7 +10,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   publicId,
   teacherName,
   teacherId,
-  enrollmentCount
+  enrollmentCount,
+  onDelete,
+  isDeleting = false
 }) => {
   const { message } = App.useApp()
 
@@ -37,14 +39,31 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             Course ID:{' '}
             <span className="font-mono text-slate-600">{publicId}</span>
           </p>
-          <Button
-            variant="outline"
-            size="small"
-            className="sm:w-auto"
-            onClick={handleCopyCourseId}
-          >
-            Copy ID
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Button
+              variant="outline"
+              size="small"
+              className="sm:w-auto"
+              onClick={handleCopyCourseId}
+            >
+              Copy ID
+            </Button>
+            {onDelete ? (
+              <Button
+                variant="outline"
+                size="small"
+                loading={isDeleting}
+                onClick={onDelete}
+                className="sm:w-auto !border-red-200 !text-red-600 hover:!border-red-400 hover:!text-red-700 hover:!bg-red-50"
+                aria-label="Delete course"
+              >
+                <span className="flex items-center gap-1">
+                  <Icon name="trash" size="small" />
+                  Delete
+                </span>
+              </Button>
+            ) : null}
+          </div>
         </div>
       </header>
 

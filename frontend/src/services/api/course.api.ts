@@ -36,6 +36,11 @@ export interface TeacherCoursesResponse {
   message: string
 }
 
+export interface DeleteCourseResponse {
+  success: boolean
+  message?: string
+}
+
 /**
  * Create a new course
  * POST /courses
@@ -59,5 +64,11 @@ export const useTeacherCourses = (
       enabled: Boolean(teacherId),
       ...options
     }
+  })
+}
+
+export const useDeleteCourse = () => {
+  return CourseService.useDelete<DeleteCourseResponse>({
+    url: '/delete'
   })
 }
