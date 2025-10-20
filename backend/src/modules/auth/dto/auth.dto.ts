@@ -107,4 +107,13 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsDateString()
   dateOfBirth?: string;
+  @ApiProperty({
+    example: 'https://example.com/image.jpg',
+    description: 'Image URL of the user',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  imageUrl?: string;
 }

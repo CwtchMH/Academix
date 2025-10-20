@@ -23,6 +23,7 @@ export interface UpdateProfileRequest {
   fullName?: string;
   email?: string;
   dateOfBirth?: string;
+  imageUrl?: string;
 }
 
 export interface UpdateProfileResponse {

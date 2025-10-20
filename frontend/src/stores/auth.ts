@@ -7,6 +7,7 @@ export interface User {
   username: string;
   email: string;
   dateOfBirth?: string;
+  imageUrl?: string;
   role: "student" | "teacher";
   createdAt: string;
   updatedAt: string;

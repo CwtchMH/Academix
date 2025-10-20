@@ -11,12 +11,15 @@ import {
 import { useState } from "react";
 import EditProfileModal from "./EditProfileModal";
 import ChangePasswordModal from "./ChangePasswordModal";
+import UploadImage from "./UploadImage";
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuth();
   const [isOpenEditProfileModal, setIsOpenEditProfileModal] =
     useState<boolean>(false);
   const [isOpenChangePasswordModal, setIsOpenChangePasswordModal] =
+    useState<boolean>(false);
+  const [isOpenUploadImageModal, setIsOpenUploadImageModal] =
     useState<boolean>(false);
   const [messageApi, contextHolder] = message.useMessage();
   if (isLoading) {
@@ -67,6 +70,15 @@ export default function ProfilePage() {
             }
             className="shadow-md"
           >
+            {user?.imageUrl ? (
+              <img
+                src={user?.imageUrl}
+                alt="Student Image"
+                className="w-[200px] h-[200px]"
+              />
+            ) : (
+              "The user has not uploaded an image yet."
+            )}
             <Descriptions column={1} bordered>
               <Descriptions.Item
                 label={
@@ -145,6 +157,13 @@ export default function ProfilePage() {
               <Button
                 block
                 size="large"
+                onClick={() => setIsOpenUploadImageModal(true)}
+              >
+                Upload Image
+              </Button>
+              <Button
+                block
+                size="large"
                 onClick={() => setIsOpenEditProfileModal(true)}
               >
                 Edit Personal Information
@@ -179,6 +198,12 @@ export default function ProfilePage() {
             onError={(error) => {
               messageApi.error(error);
             }}
+          />
+        )}
+        {isOpenUploadImageModal && (
+          <UploadImage
+            isOpen={isOpenUploadImageModal}
+            onClose={() => setIsOpenUploadImageModal(false)}
           />
         )}
       </div>
