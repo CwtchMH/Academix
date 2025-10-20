@@ -4,4 +4,6 @@ export interface CourseCardProps {
   teacherId: string
   teacherName: string
   enrollmentCount: number
+  onDelete?: () => void
+  isDeleting?: boolean
 }

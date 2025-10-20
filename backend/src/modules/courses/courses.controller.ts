@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -91,5 +92,19 @@ export class CoursesController {
       { courses },
       'Courses retrieved successfully',
     );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('delete/:courseId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a course by its ID' })
+  @ApiParam({ name: 'courseId', description: 'Course ID (Mongo ObjectId)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Course deleted successfully',
+  })
+  async deleteCourse(@Param('courseId') courseId: string) {
+    await this.coursesService.deleteCourse(courseId);
+    return ResponseHelper.success({}, 'Course deleted successfully');
   }
 }

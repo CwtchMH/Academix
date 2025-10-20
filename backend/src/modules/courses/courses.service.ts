@@ -49,6 +49,14 @@ export class CoursesService {
     return this.mapCourse(savedCourse, 0, teacher.fullName);
   }
 
+  async deleteCourse(courseId: string): Promise<void> {
+    const course = await this.courseModel.findById(courseId);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+    await this.courseModel.deleteOne({ _id: courseId });
+  }
+
   async getCoursesByTeacher(
     teacherId: string,
   ): Promise<CourseBasicResponseDto[]> {
