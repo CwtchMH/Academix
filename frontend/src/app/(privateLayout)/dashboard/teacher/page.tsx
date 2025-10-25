@@ -255,6 +255,11 @@ export default function TeacherDashboardPage() {
                               size="small"
                               variant="outline"
                               className="!px-3"
+                              onClick={() =>
+                                router.push(
+                                  `/dashboard/teacher/exams/${exam.id}/results`
+                                )
+                              }
                             >
                               View Results
                             </Button>

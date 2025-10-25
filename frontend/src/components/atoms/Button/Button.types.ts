@@ -1,6 +1,15 @@
+import { type ReactNode } from 'react'
+
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'consensus'
+  | 'link'
+
 export interface ButtonProps {
-  children: React.ReactNode
-  variant?: 'primary' | 'secondary' | 'outline' | 'consensus'
+  children: ReactNode
+  variant?: ButtonVariant
   size?: 'small' | 'medium' | 'large'
   fullWidth?: boolean
   loading?: boolean

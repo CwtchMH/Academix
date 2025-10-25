@@ -30,7 +30,7 @@ const Input: React.FC<InputProps> = ({
         suffix={suffix}
         required={required}
         className={`
-          h-12 px-4 rounded-lg border transition-colors duration-200
+          h-10 px-4 rounded-lg border transition-colors duration-200
           focus:outline-none focus:ring-2 focus:ring-offset-0
           ${
             error

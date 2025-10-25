@@ -4,7 +4,9 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
+  Put,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -15,12 +17,13 @@ import {
 } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
 import { CreateExamDto } from './dto/create-exam.dto';
+import { UpdateExamDto } from './dto/update-exam.dto';
 import { ExamSummaryDto } from './dto/exam-summary.dto';
 import { ApiResponseDto, ResponseHelper } from '../../common/dto/response.dto';
 import { Roles } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import type { IUser } from '../../common/interfaces';
-import { JoinExamResponseDto } from './dto/exam-response.dto';
+import { ExamResponseDto, JoinExamResponseDto } from './dto/exam-response.dto';
 import { JoinExamDto } from './dto/join-exam.dto';
 import type { UserDocument } from 'src/database/schemas/user.schema';
 
@@ -45,9 +48,16 @@ export class ExamsController {
             {
               id: '652fd6a7e5a69c0012345678',
               publicId: 'E123456',
-              status: 'active',
+              status: 'scheduled',
               startTime: '2025-11-12T01:00:00.000Z',
               endTime: '2025-11-12T02:30:00.000Z',
+            },
+            {
+              id: '652fd6a7e5a69c0012345679',
+              publicId: 'E123457',
+              status: 'active',
+              startTime: '2025-10-25T10:00:00.000Z',
+              endTime: '2025-10-25T12:00:00.000Z',
             },
           ],
         },
@@ -84,8 +94,8 @@ export class ExamsController {
         },
         status: {
           type: 'string',
-          enum: ['draft', 'active', 'completed', 'cancelled'],
-          example: 'draft',
+          enum: ['scheduled', 'active', 'completed', 'cancelled'],
+          example: 'scheduled',
         },
         courseId: {
           type: 'string',
@@ -155,6 +165,195 @@ export class ExamsController {
   ) {
     const exam = await this.examsService.createExam(createExamDto, user);
     return ResponseHelper.success({ exam }, 'Exam created successfully');
+  }
+
+  @Get(':id')
+  @Roles('teacher')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get full exam details including questions and answers',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Exam retrieved successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          exam: {
+            id: '652fd6a7e5a69c0012345678',
+            publicId: 'E123456',
+            title: 'Midterm Exam',
+            durationMinutes: 90,
+            startTime: '2025-11-12T01:00:00.000Z',
+            endTime: '2025-11-12T02:30:00.000Z',
+            status: 'scheduled',
+            courseId: '672f1c3ce5a3de8e3ce041f7',
+            rateScore: 70,
+            questions: [
+              {
+                id: '652fd6a7e5a69c0012345679',
+                content: 'What is the capital of France?',
+                answerQuestion: 2,
+                answer: [
+                  { content: 'London', isCorrect: false },
+                  { content: 'Paris', isCorrect: true },
+                  { content: 'Rome', isCorrect: false },
+                  { content: 'Berlin', isCorrect: false },
+                ],
+              },
+            ],
+            createdAt: '2025-10-25T10:00:00.000Z',
+            updatedAt: '2025-10-25T10:00:00.000Z',
+          },
+        },
+        message: 'Exam retrieved successfully',
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Not authorized to view this exam' })
+  @ApiResponse({ status: 404, description: 'Exam not found' })
+  async getExamById(
+    @Param('id') id: string,
+    @CurrentUser() user: IUser,
+  ): Promise<ApiResponseDto<{ exam: ExamResponseDto }>> {
+    const exam = await this.examsService.findExamById(id, user);
+    return ResponseHelper.success({ exam }, 'Exam retrieved successfully');
+  }
+
+  @Put(':id')
+  @Roles('teacher')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Update an existing exam with full replacement of metadata and questions',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Exam updated successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          exam: {
+            id: '652fd6a7e5a69c0012345678',
+            publicId: 'E123456',
+            title: 'Updated Midterm Exam',
+            durationMinutes: 120,
+            startTime: '2025-11-12T01:00:00.000Z',
+            endTime: '2025-11-12T03:00:00.000Z',
+            status: 'scheduled',
+            courseId: '672f1c3ce5a3de8e3ce041f7',
+            rateScore: 75,
+            questions: [
+              {
+                id: '652fd6a7e5a69c0012345680',
+                content: 'What is the capital of Germany?',
+                answerQuestion: 4,
+                answer: [
+                  { content: 'London', isCorrect: false },
+                  { content: 'Paris', isCorrect: false },
+                  { content: 'Rome', isCorrect: false },
+                  { content: 'Berlin', isCorrect: true },
+                ],
+              },
+            ],
+            createdAt: '2025-10-25T10:00:00.000Z',
+            updatedAt: '2025-10-25T11:00:00.000Z',
+          },
+        },
+        message: 'Exam updated successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid data, exam has already started, or exam is completed',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Not authorized to update this exam',
+  })
+  @ApiResponse({ status: 404, description: 'Exam not found' })
+  @ApiBody({
+    description: 'Complete exam data for replacement',
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', example: 'Updated Midterm Exam' },
+        durationMinutes: { type: 'number', example: 120 },
+        startTime: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-11-12T01:00:00.000Z',
+        },
+        endTime: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-11-12T03:00:00.000Z',
+        },
+        status: {
+          type: 'string',
+          enum: ['scheduled', 'active', 'completed', 'cancelled'],
+          example: 'scheduled',
+        },
+        courseId: {
+          type: 'string',
+          example: '672f1c3ce5a3de8e3ce041f7',
+        },
+        rateScore: { type: 'number', example: 75 },
+        questions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              content: {
+                type: 'string',
+                example: 'What is the capital of Germany?',
+              },
+              answerQuestion: { type: 'number', example: 4 },
+              answer: {
+                type: 'array',
+                minItems: 4,
+                maxItems: 4,
+                items: {
+                  type: 'object',
+                  properties: {
+                    content: {
+                      type: 'string',
+                      example: 'Berlin',
+                    },
+                  },
+                },
+                example: [
+                  { content: 'London' },
+                  { content: 'Paris' },
+                  { content: 'Rome' },
+                  { content: 'Berlin' },
+                ],
+              },
+            },
+          },
+        },
+      },
+      required: [
+        'title',
+        'durationMinutes',
+        'startTime',
+        'endTime',
+        'courseId',
+        'questions',
+        'rateScore',
+      ],
+    },
+  })
+  async updateExam(
+    @Param('id') id: string,
+    @Body() updateExamDto: UpdateExamDto,
+    @CurrentUser() user: IUser,
+  ): Promise<ApiResponseDto<{ exam: ExamResponseDto }>> {
+    const exam = await this.examsService.updateExam(id, updateExamDto, user);
+    return ResponseHelper.success({ exam }, 'Exam updated successfully');
   }
 
   @Post('join')

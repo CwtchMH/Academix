@@ -57,6 +57,24 @@ export interface ExamSummaryEntity {
   endTime: string
 }
 
+export interface ExamResultEntity {
+  studentId: string
+  studentName: string
+  studentCode: string
+  grade: number
+  maxGrade: number
+  status: 'pass' | 'fail'
+}
+
+export interface ExamResultsResponse {
+  success: boolean
+  data: {
+    exam: ExamEntity
+    results: ExamResultEntity[]
+  }
+  message: string
+}
+
 export interface CreateExamResponse {
   success: boolean
   data: {
@@ -87,6 +105,16 @@ export const useExams = (
 ) => {
   return ExamService.useGet<ExamsResponse>({
     url: '/',
+    options
+  })
+}
+
+export const useExamResults = (
+  examId: string,
+  options?: Omit<UseQueryOptions<ExamResultsResponse>, 'queryKey' | 'queryFn'>
+) => {
+  return ExamService.useGet<ExamResultsResponse>({
+    url: `/${examId}/results`,
     options
   })
 }

@@ -12,11 +12,8 @@ import {
   QuestionDocument,
 } from '../../database/schemas/question.schema';
 import { Course, CourseDocument } from '../../database/schemas/course.schema';
-import {
-  CreateExamDto,
-  CreateExamQuestionDto,
-  ExamStatus,
-} from './dto/create-exam.dto';
+import { CreateExamDto, CreateExamQuestionDto } from './dto/create-exam.dto';
+import { UpdateExamDto, UpdateExamQuestionDto } from './dto/update-exam.dto';
 import { ExamResponseDto, JoinExamResponseDto } from './dto/exam-response.dto';
 import { ExamSummaryDto } from './dto/exam-summary.dto';
 import { IUser } from '../../common/interfaces';
@@ -112,7 +109,7 @@ export class ExamsService {
             durationMinutes: createExamDto.durationMinutes,
             startTime,
             endTime,
-            status: createExamDto.status ?? ExamStatus.Draft,
+            status: createExamDto.status ?? 'scheduled',
             courseId: courseObjectId,
             questions: questionIds,
             rateScore: createExamDto.rateScore,
@@ -136,14 +133,19 @@ export class ExamsService {
     const now = new Date();
 
     const exams = await this.examModel
-      .find({}, { publicId: 1, startTime: 1, endTime: 1 })
+      .find({}, { publicId: 1, startTime: 1, endTime: 1, status: 1 })
       .sort({ startTime: 1 })
       .exec();
 
     return exams.map((exam) => ({
       id: String(exam._id),
       publicId: exam.publicId,
-      status: this.computeExamStatus(now, exam.startTime, exam.endTime),
+      status: this.computeExamStatus(
+        now,
+        exam.startTime,
+        exam.endTime,
+        exam.status,
+      ),
       startTime: exam.startTime,
       endTime: exam.endTime,
     }));
@@ -198,8 +200,48 @@ export class ExamsService {
     return payload;
   }
 
+  private buildQuestionPayloadFromUpdate(
+    questionDto: UpdateExamQuestionDto,
+    courseId: Types.ObjectId,
+    teacherId: Types.ObjectId,
+    index: number,
+  ) {
+    const normalizedChoices = this.normalizeChoicesFromUpdate(
+      questionDto,
+      index,
+    );
+
+    const payload: Partial<Question> = {
+      content: questionDto.content,
+      answerQuestion: questionDto.answerQuestion,
+      answer: normalizedChoices,
+      courseId,
+      teacherId,
+    };
+
+    return payload;
+  }
+
   private normalizeChoices(
     questionDto: CreateExamQuestionDto,
+    questionIndex: number,
+  ) {
+    const correctIndex = questionDto.answerQuestion - 1;
+
+    if (!questionDto.answer[correctIndex]) {
+      throw new BadRequestException(
+        `answerQuestion must reference one of the provided choices (question #${questionIndex + 1})`,
+      );
+    }
+
+    return questionDto.answer.map((choice, idx) => ({
+      content: choice.content,
+      isCorrect: idx === correctIndex,
+    }));
+  }
+
+  private normalizeChoicesFromUpdate(
+    questionDto: UpdateExamQuestionDto,
     questionIndex: number,
   ) {
     const correctIndex = questionDto.answerQuestion - 1;
@@ -248,16 +290,194 @@ export class ExamsService {
     referenceDate: Date,
     startTime: Date,
     endTime: Date,
-  ): 'scheduled' | 'active' | 'completed' {
-    if (referenceDate < startTime) {
-      return 'scheduled';
+    currentStatus: string,
+  ): 'scheduled' | 'active' | 'completed' | 'cancelled' {
+    // If exam is cancelled, keep that status
+    if (currentStatus === 'cancelled') {
+      return 'cancelled';
     }
 
+    // If exam has ended, mark as completed
     if (referenceDate > endTime) {
       return 'completed';
     }
 
-    return 'active';
+    // If exam is currently running, mark as active
+    if (referenceDate >= startTime && referenceDate <= endTime) {
+      return 'active';
+    }
+
+    // If exam hasn't started yet, keep current status (usually scheduled)
+    return currentStatus as 'scheduled' | 'active' | 'completed' | 'cancelled';
+  }
+
+  /**
+   * Fetch full exam details including all questions and answers.
+   * @param examId The MongoDB ObjectId of the exam
+   * @param teacher The authenticated teacher
+   * @returns The complete exam with questions
+   */
+  async findExamById(examId: string, teacher: IUser): Promise<ExamResponseDto> {
+    if (!Types.ObjectId.isValid(examId)) {
+      throw new BadRequestException('Invalid exam ID');
+    }
+
+    const exam = await this.examModel.findById(examId).exec();
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    // Verify course ownership
+    const course = await this.courseModel.findById(exam.courseId);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (String(course.teacherId) !== teacher.id) {
+      throw new ForbiddenException('You can only view exams for your courses');
+    }
+
+    // Load all questions
+    const questions = await this.questionModel
+      .find({ _id: { $in: exam.questions } })
+      .exec();
+
+    return this.mapExamResponse(exam, questions);
+  }
+
+  /**
+   * Update an existing exam with full replacement of metadata and questions.
+   * @param examId The MongoDB ObjectId of the exam
+   * @param updateExamDto Complete updated exam data
+   * @param teacher The authenticated teacher
+   * @returns The updated exam with questions
+   */
+  async updateExam(
+    examId: string,
+    updateExamDto: UpdateExamDto,
+    teacher: IUser,
+  ): Promise<ExamResponseDto> {
+    if (!teacher?.id) {
+      throw new ForbiddenException('Missing teacher context');
+    }
+
+    if (!Types.ObjectId.isValid(teacher.id)) {
+      throw new ForbiddenException('Invalid teacher identifier');
+    }
+
+    if (!Types.ObjectId.isValid(examId)) {
+      throw new BadRequestException('Invalid exam ID');
+    }
+
+    // Find existing exam
+    const existingExam = await this.examModel.findById(examId).exec();
+    if (!existingExam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    // Validate dates
+    const startTime = new Date(updateExamDto.startTime);
+    const endTime = new Date(updateExamDto.endTime);
+
+    this.ensureValidDates(startTime, endTime);
+    this.ensureDurationWithinWindow(
+      startTime,
+      endTime,
+      updateExamDto.durationMinutes,
+    );
+
+    // Validate courseId
+    if (!Types.ObjectId.isValid(updateExamDto.courseId)) {
+      throw new BadRequestException('Invalid courseId');
+    }
+
+    const courseObjectId = new Types.ObjectId(updateExamDto.courseId);
+    const course = await this.courseModel.findById(courseObjectId);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (String(course.teacherId) !== teacher.id) {
+      throw new ForbiddenException(
+        'You can only update exams for your courses',
+      );
+    }
+
+    // Check if exam can be updated - only allow if not started yet or cancelled
+    const now = new Date();
+    const hasStarted = now >= existingExam.startTime;
+    const isCompleted = existingExam.status === 'completed';
+
+    if (isCompleted) {
+      throw new BadRequestException('Cannot update completed exams');
+    }
+
+    if (hasStarted && existingExam.status !== 'cancelled') {
+      throw new BadRequestException(
+        'Cannot update exam that has already started',
+      );
+    }
+
+    const teacherObjectId = new Types.ObjectId(teacher.id);
+    const normalizedQuestions = updateExamDto.questions.map(
+      (questionDto, index) =>
+        this.buildQuestionPayloadFromUpdate(
+          questionDto,
+          courseObjectId,
+          teacherObjectId,
+          index,
+        ),
+    );
+
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      // Delete old questions
+      await this.questionModel.deleteMany(
+        { _id: { $in: existingExam.questions } },
+        { session },
+      );
+
+      // Create new questions
+      const createdQuestions = await this.questionModel.insertMany(
+        normalizedQuestions,
+        { session },
+      );
+
+      const questionIds = createdQuestions.map((doc) => doc._id);
+
+      // Update exam
+      const updatedExam = await this.examModel.findByIdAndUpdate(
+        examId,
+        {
+          title: updateExamDto.title,
+          durationMinutes: updateExamDto.durationMinutes,
+          startTime,
+          endTime,
+          status: updateExamDto.status ?? 'scheduled',
+          courseId: courseObjectId,
+          questions: questionIds,
+          rateScore: updateExamDto.rateScore,
+          updatedAt: new Date(),
+        },
+        { session, new: true },
+      );
+
+      if (!updatedExam) {
+        throw new NotFoundException('Exam not found during update');
+      }
+
+      await session.commitTransaction();
+
+      return this.mapExamResponse(updatedExam, createdQuestions);
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
   }
 
   /**
@@ -284,7 +504,7 @@ export class ExamsService {
     }
 
     // --- Validation 2: Check exam status ---
-    if (exam.status !== 'draft') {
+    if (exam.status !== 'scheduled') {
       throw new BadRequestException('This exam is not active.');
     }
     if (exam.endTime < new Date()) {

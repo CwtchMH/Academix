@@ -13,6 +13,7 @@ export interface IconProps {
     | 'ai'
     | 'save'
     | 'courses'
+    | 'arrow-left'
   className?: string
   size?: 'small' | 'medium' | 'large'
 }
