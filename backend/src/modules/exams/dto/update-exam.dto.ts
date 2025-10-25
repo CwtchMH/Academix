@@ -24,7 +24,7 @@ export enum ExamStatus {
   Cancelled = 'cancelled',
 }
 
-class CreateExamChoiceDto {
+class UpdateExamChoiceDto {
   @IsString()
   @IsNotEmpty()
   content: string;
@@ -33,7 +33,7 @@ class CreateExamChoiceDto {
   isCorrect?: boolean;
 }
 
-export class CreateExamQuestionDto {
+export class UpdateExamQuestionDto {
   @IsString()
   @IsNotEmpty()
   content: string;
@@ -48,11 +48,11 @@ export class CreateExamQuestionDto {
   @ArrayMinSize(4)
   @ArrayMaxSize(4)
   @ValidateNested({ each: true })
-  @Type(() => CreateExamChoiceDto)
-  answer: CreateExamChoiceDto[];
+  @Type(() => UpdateExamChoiceDto)
+  answer: UpdateExamChoiceDto[];
 }
 
-export class CreateExamDto {
+export class UpdateExamDto {
   @IsString()
   @IsNotEmpty()
   title: string;
@@ -78,8 +78,8 @@ export class CreateExamDto {
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
-  @Type(() => CreateExamQuestionDto)
-  questions: CreateExamQuestionDto[];
+  @Type(() => UpdateExamQuestionDto)
+  questions: UpdateExamQuestionDto[];
 
   @Type(() => Number)
   @IsNumber()

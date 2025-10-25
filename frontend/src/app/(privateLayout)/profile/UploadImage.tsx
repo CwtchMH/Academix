@@ -1,238 +1,218 @@
-import { useState } from "react";
-import { Modal, Upload, Button, message, Image, Space, Typography } from "antd";
-import { UploadOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
-import type { UploadFile, UploadProps } from "antd";
-import { updateProfile } from "@/services";
-import { useAuth } from "@/stores/auth";
-
-const { Text } = Typography;
+import { useState } from 'react'
+import { Modal, Button, message, Image } from 'antd'
+import type { UploadFile, UploadProps } from 'antd'
+import { ImageUploadArea } from '@/components/molecules'
+import { updateProfile } from '@/services'
+import { useAuth } from '@/stores/auth'
+import './upload-image.css'
 
 interface UploadImageProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onUploadSuccess?: (imageUrl: string) => void;
-  currentImageUrl?: string;
+  isOpen: boolean
+  onClose: () => void
+  onUploadSuccess?: (imageUrl: string) => void
+  currentImageUrl?: string
 }
 
 const UploadImage = ({
   isOpen,
   onClose,
   onUploadSuccess,
-  currentImageUrl,
+  currentImageUrl
 }: UploadImageProps) => {
-  const { setUser } = useAuth();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [previewImage, setPreviewImage] = useState<string>("");
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const { setUser } = useAuth()
+  const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [previewImage, setPreviewImage] = useState<string>('')
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
-  const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
-    setFileList(newFileList);
-  };
+  // Handlers
+  const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
+    setFileList(newFileList)
+  }
 
   const handlePreview = async (file: UploadFile) => {
     if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj as File);
+      file.preview = await getBase64(file.originFileObj as File)
     }
-    setPreviewImage(file.url || (file.preview as string));
-    setPreviewOpen(true);
-  };
+    setPreviewImage(file.url || (file.preview as string))
+    setPreviewOpen(true)
+  }
 
   const handleRemove = (file: UploadFile) => {
-    const newFileList = fileList.filter((item) => item.uid !== file.uid);
-    setFileList(newFileList);
-  };
+    const newFileList = fileList.filter((item) => item.uid !== file.uid)
+    setFileList(newFileList)
+  }
 
   const handleUpdateImageProfile = async (imageUrl: string) => {
     try {
-      const response = await updateProfile({
-        imageUrl: imageUrl,
-      });
+      const response = await updateProfile({ imageUrl })
       if (response.success) {
-        setUser(response.data.user);
-        message.success("Image updated successfully!");
-        onClose();
+        setUser(response.data.user)
+        message.success('Avatar updated successfully!')
+        onUploadSuccess?.(imageUrl)
+        onClose()
       } else {
-        message.error(response.message || "Failed to update image");
+        message.error(response.message || 'Failed to update avatar')
       }
     } catch (error: any) {
       message.error(
         error.response?.data?.message ||
-          "Failed to update profile. Please try again."
-      );
+          'Failed to update profile. Please try again.'
+      )
     }
-  };
+  }
 
   const handleUpload = async () => {
+    // Validation
     if (fileList.length === 0) {
-      message.warning("Vui lòng chọn ảnh để upload");
-      return;
+      message.warning('Please select an image to upload')
+      return
     }
 
-    const file = fileList[0];
+    const file = fileList[0]
     if (!file.originFileObj) {
-      message.error("File không hợp lệ");
-      return;
+      message.error('Invalid file')
+      return
     }
 
-    const isImage = file.originFileObj.type.startsWith("image/");
+    const isImage = file.originFileObj.type.startsWith('image/')
     if (!isImage) {
-      message.error("Chỉ được upload file ảnh!");
-      return;
+      message.error('Only image files are allowed!')
+      return
     }
 
-    const isLt5M = file.originFileObj.size / 1024 / 1024 < 5;
+    const isLt5M = file.originFileObj.size / 1024 / 1024 < 5
     if (!isLt5M) {
-      message.error("Ảnh phải nhỏ hơn 5MB!");
-      return;
+      message.error('Image must be smaller than 5MB!')
+      return
     }
 
-    setUploading(true);
+    // Upload to Cloudinary
+    setUploading(true)
     try {
-      const formData = new FormData();
-      formData.append("file", file.originFileObj);
-      formData.append("upload_preset", "my_images");
+      const formData = new FormData()
+      formData.append('file', file.originFileObj)
+      formData.append('upload_preset', 'my_images')
+
       const response = await fetch(
-        "https://api.cloudinary.com/v1_1/dl9mhhoqs/image/upload",
+        'https://api.cloudinary.com/v1_1/dl9mhhoqs/image/upload',
         {
-          method: "POST",
-          body: formData,
+          method: 'POST',
+          body: formData
         }
-      );
-      const data = await response.json();
-      if (data?.secure_url) handleUpdateImageProfile(data?.secure_url);
+      )
+
+      const data = await response.json()
+      if (data?.secure_url) {
+        await handleUpdateImageProfile(data.secure_url)
+      }
     } catch (error) {
-      console.error("Upload error:", error);
-      message.error("Upload ảnh thất bại. Vui lòng thử lại.");
+      console.error('Upload error:', error)
+      message.error('Upload failed. Please try again.')
     } finally {
-      setUploading(false);
+      setUploading(false)
     }
-  };
+  }
 
   const handleCancel = () => {
-    setFileList([]);
-    onClose();
-  };
+    setFileList([])
+    onClose()
+  }
 
+  // Upload configuration
   const uploadProps: UploadProps = {
-    name: "image",
-    listType: "picture-card",
-    fileList: fileList,
+    name: 'image',
+    listType: 'picture-card',
+    fileList,
     onChange: handleChange,
     onPreview: handlePreview,
     onRemove: handleRemove,
     beforeUpload: (file) => {
-      const isImage = file.type.startsWith("image/");
+      const isImage = file.type.startsWith('image/')
       if (!isImage) {
-        message.error("Chỉ được upload file ảnh!");
-        return false;
+        message.error('Only image files are allowed!')
+        return false
       }
-      const isLt5M = file.size / 1024 / 1024 < 5;
+      const isLt5M = file.size / 1024 / 1024 < 5
       if (!isLt5M) {
-        message.error("Ảnh phải nhỏ hơn 5MB!");
-        return false;
+        message.error('Image must be smaller than 5MB!')
+        return false
       }
-      return false;
+      return false // Prevent auto upload
     },
     maxCount: 1,
-    accept: "image/*",
-  };
+    accept: 'image/*'
+  }
 
   return (
     <>
       <Modal
-        title="Upload Ảnh Đại Diện"
+        title={
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold text-slate-800">
+              Upload Avatar
+            </span>
+          </div>
+        }
         open={isOpen}
         onCancel={handleCancel}
-        width={600}
-        footer={[
-          <Button key="cancel" onClick={handleCancel}>
-            Hủy
-          </Button>,
-          <Button
-            key="upload"
-            type="primary"
-            onClick={handleUpload}
-            loading={uploading}
-            disabled={fileList.length === 0}
-          >
-            Upload
-          </Button>,
-        ]}
+        width={650}
+        className="upload-image-modal"
+        footer={
+          <div className="flex justify-end gap-3 pt-4">
+            <Button size="large" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleUpload}
+              loading={uploading}
+              disabled={fileList.length === 0}
+              className="min-w-[100px]"
+            >
+              {uploading ? 'Uploading...' : 'Upload'}
+            </Button>
+          </div>
+        }
       >
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          {currentImageUrl && (
-            <div>
-              <Text strong>Ảnh hiện tại:</Text>
-              <div style={{ marginTop: 8 }}>
-                <Image
-                  src={currentImageUrl}
-                  alt="Current avatar"
-                  style={{
-                    width: 100,
-                    height: 100,
-                    objectFit: "cover",
-                    borderRadius: 8,
-                  }}
-                  preview={{
-                    mask: <EyeOutlined />,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          <div>
-            <Text strong>Chọn ảnh mới:</Text>
-            <div style={{ marginTop: 8 }}>
-              <Upload {...uploadProps}>
-                {fileList.length >= 1 ? null : (
-                  <div style={{ padding: "20px" }}>
-                    <UploadOutlined
-                      style={{ fontSize: "24px", color: "#1890ff" }}
-                    />
-                    <div style={{ marginTop: 8 }}>Click để chọn ảnh</div>
-                  </div>
-                )}
-              </Upload>
-            </div>
-          </div>
-          {/* Upload Guidelines */}
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#f6f8fa",
-              borderRadius: "6px",
-              fontSize: "12px",
-              color: "#666",
-            }}
-          >
-            <Text strong>Lưu ý:</Text>
-            <ul style={{ margin: "4px 0 0 0", paddingLeft: "16px" }}>
-              <li>Chỉ hỗ trợ định dạng: JPG, PNG, GIF</li>
-              <li>Kích thước tối đa: 5MB</li>
-              <li>Khuyến nghị tỷ lệ: 1:1 (vuông)</li>
-            </ul>
-          </div>
-        </Space>
+        <div className="py-4">
+          <ImageUploadArea
+            currentImageUrl={currentImageUrl}
+            uploadProps={uploadProps}
+            fileList={fileList}
+            showGuidelines={true}
+            guidelinesVariant="default"
+            layout="vertical"
+          />
+        </div>
       </Modal>
+      Preview Modal
       <Modal
         open={previewOpen}
-        title="Xem trước ảnh"
+        title="Preview Image"
         footer={null}
         onCancel={() => setPreviewOpen(false)}
+        centered
       >
-        <Image alt="preview" style={{ width: "100%" }} src={previewImage} />
+        <Image
+          alt="preview"
+          style={{ width: '100%' }}
+          src={previewImage}
+          preview={false}
+        />
       </Modal>
     </>
-  );
-};
+  )
+}
 
+// Helper function
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = (error) => reject(error)
+  })
 
-export default UploadImage;
+export default UploadImage

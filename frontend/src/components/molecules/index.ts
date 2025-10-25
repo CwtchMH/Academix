@@ -7,6 +7,8 @@ export { UserDropdown } from './UserDropdown'
 export { StatCard } from './StatCard'
 export { QuestionPreviewItem } from './QuestionPreviewItem'
 export { CourseCard } from './CourseCard'
+export { FilterBar } from './FilterBar'
+export { ImageUploadArea } from './ImageUploadArea'
 
 export type { FormFieldProps } from './FormField'
 export type { LoginFormProps, LoginFormData } from './LoginForm'
@@ -20,3 +22,5 @@ export type {
   QuestionPreviewChoice
 } from './QuestionPreviewItem'
 export type { CourseCardProps } from './CourseCard'
+export type { FilterBarProps } from './FilterBar'
+export type { ImageUploadAreaProps } from './ImageUploadArea'

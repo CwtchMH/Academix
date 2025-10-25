@@ -14,11 +14,11 @@ export class ExamSummaryDto {
   publicId: string;
 
   @ApiProperty({
-    description: 'Current status of the exam calculated from its schedule',
-    enum: ['scheduled', 'active', 'completed'],
+    description: 'Current status of the exam',
+    enum: ['scheduled', 'active', 'completed', 'cancelled'],
     example: 'active',
   })
-  status: 'scheduled' | 'active' | 'completed';
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
 
   @ApiProperty({
     description: 'Date and time when the exam begins',

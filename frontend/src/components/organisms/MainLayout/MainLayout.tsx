@@ -68,7 +68,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       {/* Mobile Overlay */}
       {!isSidebarCollapsed && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+          className="lg:hidden fixed inset-0 bg-opacity-50 z-20"
           onClick={() => setIsSidebarCollapsed(true)}
         />
       )}

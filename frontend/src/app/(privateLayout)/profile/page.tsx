@@ -1,33 +1,43 @@
-"use client";
+'use client'
 
-import { useAuth } from "@/stores/auth";
-import { Card, Descriptions, Tag, Spin, Button, Space, message } from "antd";
+import { useAuth } from '@/stores/auth'
+import {
+  Card,
+  Descriptions,
+  Tag,
+  Spin,
+  Button,
+  Space,
+  message,
+  Avatar
+} from 'antd'
 import {
   UserOutlined,
   MailOutlined,
   IdcardOutlined,
   CalendarOutlined,
-} from "@ant-design/icons";
-import { useState } from "react";
-import EditProfileModal from "./EditProfileModal";
-import ChangePasswordModal from "./ChangePasswordModal";
-import UploadImage from "./UploadImage";
+  CameraOutlined
+} from '@ant-design/icons'
+import { useState } from 'react'
+import EditProfileModal from './EditProfileModal'
+import ChangePasswordModal from './ChangePasswordModal'
+import UploadImage from './UploadImage'
 
 export default function ProfilePage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useAuth()
   const [isOpenEditProfileModal, setIsOpenEditProfileModal] =
-    useState<boolean>(false);
+    useState<boolean>(false)
   const [isOpenChangePasswordModal, setIsOpenChangePasswordModal] =
-    useState<boolean>(false);
+    useState<boolean>(false)
   const [isOpenUploadImageModal, setIsOpenUploadImageModal] =
-    useState<boolean>(false);
-  const [messageApi, contextHolder] = message.useMessage();
+    useState<boolean>(false)
+  const [messageApi, contextHolder] = message.useMessage()
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Spin size="large" />
       </div>
-    );
+    )
   }
 
   if (!user) {
@@ -42,7 +52,7 @@ export default function ProfilePage() {
           </Space>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
@@ -63,22 +73,33 @@ export default function ProfilePage() {
                 <span>Personal Information</span>
               </Space>
             }
-            extra={
-              <Tag color={user?.role === "teacher" ? "blue" : "green"}>
-                {user?.role === "teacher" ? "Teacher" : "Student"}
-              </Tag>
-            }
             className="shadow-md"
           >
-            {user?.imageUrl ? (
-              <img
+            {/* Avatar Section */}
+            <div className="mb-6 flex flex-col items-center gap-4 border-b border-slate-200 pb-6">
+              <Avatar
+                size={160}
                 src={user?.imageUrl}
-                alt="Student Image"
-                className="w-[200px] h-[200px]"
+                icon={!user?.imageUrl && <UserOutlined />}
+                className="ring-4 ring-slate-100 shadow-lg"
               />
-            ) : (
-              "The user has not uploaded an image yet."
-            )}
+              <div
+                className="flex items-center gap-3 cursor-pointer"
+                onClick={() => setIsOpenUploadImageModal(true)}
+              >
+                <Button
+                  type="primary"
+                  shape="circle"
+                  size="large"
+                  icon={<CameraOutlined />}
+                  className="absolute bottom-0 right-0 shadow-lg"
+                />
+                <span className="text-sm text-gray-500">
+                  Update your image profile
+                </span>
+              </div>
+            </div>
+
             <Descriptions column={1} bordered>
               <Descriptions.Item
                 label={
@@ -110,7 +131,7 @@ export default function ProfilePage() {
                   </Space>
                 }
               >
-                {user?.fullName || "--"}
+                {user?.fullName || '--'}
               </Descriptions.Item>
 
               <Descriptions.Item
@@ -123,7 +144,7 @@ export default function ProfilePage() {
               >
                 {user?.dateOfBirth
                   ? new Date(user.dateOfBirth).toLocaleDateString()
-                  : "--"}
+                  : '--'}
               </Descriptions.Item>
 
               <Descriptions.Item
@@ -145,33 +166,30 @@ export default function ProfilePage() {
                   </Space>
                 }
               >
-                <Tag color={user?.role === "teacher" ? "blue" : "green"}>
-                  {user?.role === "teacher" ? "Teacher" : "Student"}
+                <Tag color={user?.role === 'teacher' ? 'blue' : 'green'}>
+                  {user?.role === 'teacher' ? 'Teacher' : 'Student'}
                 </Tag>
               </Descriptions.Item>
             </Descriptions>
           </Card>
 
-          <Card className="!mt-6 shadow-md">
-            <Space direction="vertical" style={{ width: "100%" }}>
+          <Card className="!mt-6 shadow-md" title="Quick Actions">
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
               <Button
                 block
                 size="large"
-                onClick={() => setIsOpenUploadImageModal(true)}
-              >
-                Upload Image
-              </Button>
-              <Button
-                block
-                size="large"
+                icon={<UserOutlined />}
                 onClick={() => setIsOpenEditProfileModal(true)}
+                className="flex items-center justify-center gap-2"
               >
                 Edit Personal Information
               </Button>
               <Button
                 block
                 size="large"
+                icon={<IdcardOutlined />}
                 onClick={() => setIsOpenChangePasswordModal(true)}
+                className="flex items-center justify-center gap-2"
               >
                 Change Password
               </Button>
@@ -192,11 +210,11 @@ export default function ProfilePage() {
             isOpen={isOpenChangePasswordModal}
             onClose={() => setIsOpenChangePasswordModal(false)}
             onSuccess={() => {
-              console.log("Password changed successfully!");
-              messageApi.success("Password changed successfully!");
+              console.log('Password changed successfully!')
+              messageApi.success('Password changed successfully!')
             }}
             onError={(error) => {
-              messageApi.error(error);
+              messageApi.error(error)
             }}
           />
         )}
@@ -204,9 +222,13 @@ export default function ProfilePage() {
           <UploadImage
             isOpen={isOpenUploadImageModal}
             onClose={() => setIsOpenUploadImageModal(false)}
+            currentImageUrl={user?.imageUrl}
+            onUploadSuccess={() => {
+              messageApi.success('Avatar updated successfully!')
+            }}
           />
         )}
       </div>
     </>
-  );
+  )
 }

@@ -28,10 +28,10 @@ export class Exam {
 
   @Prop({
     type: String,
-    enum: ['draft', 'active', 'completed', 'cancelled'],
-    default: 'draft',
+    enum: ['scheduled', 'active', 'completed', 'cancelled'],
+    default: 'scheduled',
   })
-  status: 'draft' | 'active' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
 
   @Prop({ type: Types.ObjectId, ref: 'Course', required: true })
   courseId: Types.ObjectId;
