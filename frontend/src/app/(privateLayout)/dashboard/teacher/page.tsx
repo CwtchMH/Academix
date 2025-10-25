@@ -1,11 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Spin } from 'antd'
+import { Spin, Tooltip } from 'antd'
 import { Badge, Button, Icon, Input, Select } from '@/components/atoms'
 import { StatCard } from '@/components/molecules'
 import { useRouter } from 'next/navigation'
 import { useExams } from '@/services/api/exam.api'
+import { useAuth } from '@/stores/auth'
 
 type ExamStatus = 'active' | 'scheduled' | 'completed'
 
@@ -15,6 +16,7 @@ interface ExamRow {
   status: ExamStatus
   startTime: string
   endTime: string
+  isEditable: boolean
 }
 
 const statusFilterOptions = [
@@ -77,6 +79,7 @@ const formatDateTime = (isoString: string) => {
 
 export default function TeacherDashboardPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const {
     data: examsResponse,
     isLoading,
@@ -84,19 +87,24 @@ export default function TeacherDashboardPage() {
     isError,
     error,
     refetch
-  } = useExams()
+  } = useExams(user?.id ?? '', {
+    enabled: Boolean(user?.id),
+    refetchOnWindowFocus: false
+  })
 
   const exams = examsResponse?.data.exams ?? []
   const isBusy = isLoading || isFetching
 
   const examRows = useMemo<ExamRow[]>(() => {
     return exams.map((exam) => {
+      const normalizedStatus = normalizeStatus(exam.status)
       return {
         id: exam.id,
         code: exam.publicId,
-        status: normalizeStatus(exam.status),
+        status: normalizedStatus,
         startTime: formatDateTime(exam.startTime),
-        endTime: formatDateTime(exam.endTime)
+        endTime: formatDateTime(exam.endTime),
+        isEditable: normalizedStatus === 'scheduled'
       }
     })
   }, [exams])
@@ -192,7 +200,11 @@ export default function TeacherDashboardPage() {
 
           {isBusy ? (
             <div className="flex h-40 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
-              <Spin tip="Loading exams..." />
+              <Spin tip="Loading...">
+                <div style={{ height: 200 }}>
+                  <p>Loading exams...</p>
+                </div>
+              </Spin>
             </div>
           ) : isError ? (
             <div className="space-y-3 rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-600">
@@ -263,13 +275,31 @@ export default function TeacherDashboardPage() {
                             >
                               View Results
                             </Button>
-                            <Button
-                              size="small"
-                              variant="outline"
-                              className="!px-3"
+                            <Tooltip
+                              title={
+                                exam.isEditable
+                                  ? undefined
+                                  : 'Only scheduled exams can be edited'
+                              }
                             >
-                              Edit
-                            </Button>
+                              <Button
+                                size="small"
+                                variant="outline"
+                                className="!px-3"
+                                disabled={!exam.isEditable}
+                                aria-disabled={!exam.isEditable}
+                                onClick={() => {
+                                  if (!exam.isEditable) {
+                                    return
+                                  }
+                                  router.push(
+                                    `/dashboard/teacher/exams/create?examId=${exam.id}`
+                                  )
+                                }}
+                              >
+                                Edit
+                              </Button>
+                            </Tooltip>
                           </div>
                         </td>
                       </tr>

@@ -12,7 +12,9 @@ export const MenuItem: React.FC<MenuItemProps> = ({
     <button
       onClick={onClick}
       className={`
-        w-full flex cursor-pointer items-center space-x-3 px-4 py-3 rounded-lg transition-colors
+        w-full flex cursor-pointer items-center ${
+          !label ? 'justify-center' : ''
+        } space-x-3 px-4 py-3 rounded-lg transition-colors
         ${
           isActive
             ? 'bg-gray-100 text-gray-900'

@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { App, Form, Modal, Radio } from 'antd'
+import dayjs from 'dayjs'
+import { App, Form, Modal, Radio, Spin } from 'antd'
 import {
   Button,
   Icon,
@@ -14,9 +15,17 @@ import {
   FinalizeExamModal,
   type FinalizeExamFormValues
 } from '@/components/organisms'
-import { useCreateExam, type CreateExamRequest } from '@/services/api/exam.api'
+import {
+  useCreateExam,
+  useGetExam,
+  useUpdateExam,
+  type CreateExamRequest,
+  type ExamEntity
+} from '@/services/api/exam.api'
 import { useTeacherCourses } from '@/services/api/course.api'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/stores/auth'
+import { parseApiError } from '@/services/utils/auth.utils'
 
 interface AnswerChoiceDraft {
   id: string
@@ -44,6 +53,10 @@ const createEmptyChoices = (count = 4): AnswerChoiceDraft[] => {
   }))
 }
 
+const createExistingChoiceId = (questionId: string, index: number) => {
+  return `${questionId}-choice-${index}`
+}
+
 const padChoices = (choices: AnswerChoiceDraft[], desiredLength = 4) => {
   const padded = choices.map((choice, index) => ({
     id: choice.id ?? generateChoiceId(index),
@@ -59,14 +72,67 @@ const padChoices = (choices: AnswerChoiceDraft[], desiredLength = 4) => {
 
 const initialQuestions: ExamQuestion[] = []
 
+const mapExamQuestionToDraft = (
+  question: ExamEntity['questions'][number]
+): ExamQuestion => {
+  const choices = question.answer.map((choice, index) => ({
+    id: createExistingChoiceId(question.id, index),
+    text: choice.content ?? ''
+  }))
+
+  const correctChoiceIndex = Math.max(0, question.answerQuestion - 1)
+  const correctChoice = choices[correctChoiceIndex]
+
+  return {
+    id: question.id,
+    prompt: question.content ?? '',
+    choices,
+    correctChoiceId: correctChoice?.id ?? null
+  }
+}
+
+const mapExamToFinalizeValues = (exam: ExamEntity): FinalizeExamFormValues => {
+  return {
+    courseId: exam.courseId,
+    durationMinutes: exam.durationMinutes,
+    rateScore: exam.rateScore,
+    startTime: exam.startTime ? dayjs(exam.startTime) : null,
+    endTime: exam.endTime ? dayjs(exam.endTime) : null
+  }
+}
+
 export default function CreateTeacherExamPage() {
   const { message } = App.useApp()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const examId = searchParams?.get('examId') ?? undefined
   const { user, getUser } = useAuth()
   const createExamMutation = useCreateExam()
+  const updateExamMutation = useUpdateExam()
+  const isEditing = Boolean(examId)
+  const shouldLoadExam = Boolean(examId)
+  const {
+    data: examDetailResponse,
+    isLoading: isLoadingExam,
+    isFetching: isFetchingExam,
+    isError: isExamError,
+    error: examError
+  } = useGetExam(examId ?? '', {
+    enabled: shouldLoadExam,
+    refetchOnWindowFocus: false,
+    retry: false
+  })
   const { data: teacherCoursesData } = useTeacherCourses(user?.id, {
     enabled: Boolean(user?.id),
     refetchOnWindowFocus: false
   })
+
+  useEffect(() => {
+    if (!user?.id) {
+      void getUser()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [examTitle, setExamTitle] = useState('')
   const [choiceTemplate, setChoiceTemplate] = useState<AnswerChoiceDraft[]>(
     createEmptyChoices()
@@ -82,6 +148,8 @@ export default function CreateTeacherExamPage() {
   const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false)
   const [questionPendingDeletion, setQuestionPendingDeletion] =
     useState<ExamQuestion | null>(null)
+  const [finalizeInitialValues, setFinalizeInitialValues] =
+    useState<FinalizeExamFormValues>()
   const [form] = Form.useForm<{
     prompt: string
     choices: { text: string }[]
@@ -141,10 +209,12 @@ export default function CreateTeacherExamPage() {
     })
   }
 
+  const getTrimmedTitle = () => examTitle.trim()
+
   const buildExamRequest = (
     finalizeValues: FinalizeExamFormValues
   ): CreateExamRequest => {
-    const trimmedTitle = examTitle.trim()
+    const trimmedTitle = getTrimmedTitle()
 
     if (!trimmedTitle) {
       throw new Error('Please enter an exam title before saving.')
@@ -188,7 +258,7 @@ export default function CreateTeacherExamPage() {
       durationMinutes,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
-      status: 'draft',
+      status: 'scheduled',
       courseId,
       rateScore,
       questions: questionPayloads
@@ -224,6 +294,33 @@ export default function CreateTeacherExamPage() {
     applyBuilderValues(choiceTemplate)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!shouldLoadExam) {
+      return
+    }
+
+    if (isExamError) {
+      message.error(
+        parseApiError(examError) ?? 'Unable to load exam for editing.'
+      )
+      router.replace('/dashboard/teacher')
+      return
+    }
+
+    const exam = examDetailResponse?.data.exam
+
+    if (!exam) {
+      return
+    }
+
+    setExamTitle(exam.title ?? '')
+    setQuestions(exam.questions.map(mapExamQuestionToDraft))
+    setFinalizeInitialValues(mapExamToFinalizeValues(exam))
+    setEditingQuestionId(null)
+    setExpandedQuestionId(null)
+    applyBuilderValues(createEmptyChoices())
+  }, [examDetailResponse, isExamError, message, router, shouldLoadExam])
 
   const handleChoiceTextChange = (index: number, value: string) => {
     setChoiceTemplate((prev) => {
@@ -292,7 +389,7 @@ export default function CreateTeacherExamPage() {
     }
   }
 
-  const handleEditQuestion = (question: ExamQuestion) => {
+  const applyQuestionForEditing = (question: ExamQuestion) => {
     setEditingQuestionId(question.id)
     setExpandedQuestionId(question.id)
     applyBuilderValues(
@@ -300,6 +397,10 @@ export default function CreateTeacherExamPage() {
       question.prompt,
       question.correctChoiceId
     )
+  }
+
+  const handleEditQuestion = (question: ExamQuestion) => {
+    applyQuestionForEditing(question)
   }
 
   const handleRequestDeleteQuestion = (questionId: string) => {
@@ -348,7 +449,7 @@ export default function CreateTeacherExamPage() {
 
   const handleSaveExamClick = () => {
     try {
-      const trimmedTitle = examTitle.trim()
+      const trimmedTitle = getTrimmedTitle()
 
       if (!trimmedTitle) {
         throw new Error('Please enter an exam title before saving.')
@@ -370,6 +471,24 @@ export default function CreateTeacherExamPage() {
   ) => {
     try {
       const requestPayload = buildExamRequest(finalizeValues)
+
+      if (isEditing && examId) {
+        const response = await updateExamMutation.mutateAsync({
+          examId,
+          data: requestPayload
+        })
+
+        if (!response.success) {
+          message.error(response.message ?? 'Failed to update exam')
+          return
+        }
+
+        message.success(response.message ?? 'Exam updated successfully')
+        setIsFinalizeModalOpen(false)
+        void router.push('/dashboard/teacher')
+        return
+      }
+
       const response = await createExamMutation.mutateAsync({
         data: requestPayload as unknown as Record<string, unknown>
       })
@@ -396,8 +515,26 @@ export default function CreateTeacherExamPage() {
       }
 
       const apiMessage = apiError.response?.data?.message
-      message.error(apiMessage ?? 'Failed to create exam')
+      message.error(apiMessage ?? 'Unable to save exam')
     }
+  }
+
+  const isBusy = isLoadingExam || isFetchingExam
+  const isMutationPending =
+    createExamMutation.isPending || updateExamMutation.isPending
+
+  useEffect(() => {
+    if (!isEditing) {
+      setFinalizeInitialValues(undefined)
+    }
+  }, [isEditing])
+
+  if (isEditing && isBusy) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Spin tip="Loading exam..." />
+      </div>
+    )
   }
 
   return (
@@ -406,18 +543,19 @@ export default function CreateTeacherExamPage() {
         <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900">
-              Create New Exam
+              {isEditing ? 'Edit Exam' : 'Create New Exam'}
             </h1>
           </div>
           <Button
             variant="primary"
             size="medium"
             onClick={handleSaveExamClick}
+            loading={isMutationPending}
             className="self-start md:self-auto"
           >
             <span className="flex items-center gap-2">
               <Icon name="save" size="small" />
-              Save Exam
+              {isEditing ? 'Update Exam' : 'Save Exam'}
             </span>
           </Button>
         </header>
@@ -602,7 +740,8 @@ export default function CreateTeacherExamPage() {
         onClose={() => setIsFinalizeModalOpen(false)}
         onSubmit={handleFinalizeExamSubmit}
         courseOptions={courseOptions}
-        loading={createExamMutation.isPending}
+        loading={isMutationPending}
+        initialValues={finalizeInitialValues}
       />
     </React.Fragment>
   )

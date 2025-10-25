@@ -33,10 +33,10 @@ import type { UserDocument } from 'src/database/schemas/user.schema';
 export class ExamsController {
   constructor(private readonly examsService: ExamsService) {}
 
-  @Get()
+  @Get('teacher/:teacherId')
   @Roles('student', 'teacher', 'admin')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Retrieve exams with their current status' })
+  @ApiOperation({ summary: 'Retrieve exams filtered by teacher ID' })
   @ApiResponse({
     status: 200,
     description: 'Exams retrieved successfully',
@@ -65,8 +65,10 @@ export class ExamsController {
       },
     },
   })
-  async listExams(): Promise<ApiResponseDto<{ exams: ExamSummaryDto[] }>> {
-    const exams = await this.examsService.listExamSummaries();
+  async listExamsByTeacher(
+    @Param('teacherId') teacherId: string,
+  ): Promise<ApiResponseDto<{ exams: ExamSummaryDto[] }>> {
+    const exams = await this.examsService.listExamSummaries(teacherId);
     return ResponseHelper.success({ exams }, 'Exams retrieved successfully');
   }
 
