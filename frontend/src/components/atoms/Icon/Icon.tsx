@@ -369,8 +369,8 @@ export const Icon: React.FC<IconProps> = ({
     courses: (
       <svg
         fill="#000000"
-        height="800px"
-        width="800px"
+        height="16"
+        width="16"
         version="1.1"
         id="Capa_1"
         xmlns="http://www.w3.org/2000/svg"

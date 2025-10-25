@@ -35,7 +35,11 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spin size="large" />
+        <Spin size="large">
+          <div style={{ height: 200 }}>
+            <p>Loading...</p>
+          </div>
+        </Spin>
       </div>
     )
   }

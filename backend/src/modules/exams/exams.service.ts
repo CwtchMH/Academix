@@ -129,11 +129,31 @@ export class ExamsService {
     }
   }
 
-  async listExamSummaries(): Promise<ExamSummaryDto[]> {
+  async listExamSummaries(teacherId?: string): Promise<ExamSummaryDto[]> {
     const now = new Date();
 
+    let query = {};
+
+    // If teacherId is provided, filter exams by courses owned by that teacher
+    if (teacherId) {
+      if (!Types.ObjectId.isValid(teacherId)) {
+        throw new BadRequestException('Invalid teacher ID');
+      }
+
+      // Find all courses owned by this teacher
+      const courses = await this.courseModel
+        .find({ teacherId: new Types.ObjectId(teacherId) })
+        .select('_id')
+        .exec();
+
+      const courseIds = courses.map((course) => course._id);
+
+      // Filter exams by these course IDs
+      query = { courseId: { $in: courseIds } };
+    }
+
     const exams = await this.examModel
-      .find({}, { publicId: 1, startTime: 1, endTime: 1, status: 1 })
+      .find(query, { publicId: 1, startTime: 1, endTime: 1, status: 1 })
       .sort({ startTime: 1 })
       .exec();
 

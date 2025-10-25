@@ -46,7 +46,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       {/* ... Mobile Sidebar Toggle & Overlay ... */}
       <button
         onClick={toggleSidebar}
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
+        className="fixed bottom-4 left-4 z-40 p-2 cursor-pointer bg-white rounded-lg shadow-lg border border-gray-200"
       >
         <svg
           width="20"
@@ -65,14 +65,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         </svg>
       </button>
 
-      {/* Mobile Overlay */}
-      {!isSidebarCollapsed && (
-        <div
-          className="lg:hidden fixed inset-0 bg-opacity-50 z-20"
-          onClick={() => setIsSidebarCollapsed(true)}
-        />
-      )}
-
       {/* Sidebar */}
       <div
         className={`
@@ -80,11 +72,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         transition-all duration-300 ease-in-out
         fixed lg:relative z-30 h-screen
         ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-60'}
-        ${
-          !isSidebarCollapsed
-            ? 'translate-x-0'
-            : '-translate-x-full lg:translate-x-0'
-        }
+        
       `}
       >
         <Sidebar
