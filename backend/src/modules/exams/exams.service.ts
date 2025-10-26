@@ -14,7 +14,7 @@ import {
 import { Course, CourseDocument } from '../../database/schemas/course.schema';
 import { CreateExamDto, CreateExamQuestionDto } from './dto/create-exam.dto';
 import { UpdateExamDto, UpdateExamQuestionDto } from './dto/update-exam.dto';
-import { ExamResponseDto, JoinExamResponseDto } from './dto/exam-response.dto';
+import { ExamResponseDto, JoinExamResponseDto, TakeExamResponseDto } from './dto/exam-response.dto';
 import { ExamSummaryDto } from './dto/exam-summary.dto';
 import { IUser } from '../../common/interfaces';
 import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
@@ -22,6 +22,7 @@ import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
 import { UserDocument } from '../../database/schemas/user.schema';
 import { JoinExamDto } from './dto/join-exam.dto';
 import { log } from 'console';
+import { Submission, SubmissionDocument } from 'src/database/schemas/submission.schema';
 
 @Injectable()
 export class ExamsService {
@@ -37,6 +38,8 @@ export class ExamsService {
 
     // @InjectModel(Enrollment.name)
     // private enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(Submission.name)
+    private submissionModel: Model<SubmissionDocument>,
   ) {}
 
   async createExam(
@@ -546,4 +549,68 @@ export class ExamsService {
     // --- Success ---
     return new JoinExamResponseDto(exam);
   }
+
+  /**
+   * Get full exam details for a student to start taking it.
+   * This performs all necessary validations.
+   * @param publicId The exam's public ID
+   * @param user The authenticated student
+   * @returns The sanitized exam data (no correct answers)
+   */
+  async getExamForTaking(
+    publicId: string,
+    user: UserDocument,
+  ): Promise<TakeExamResponseDto> {
+    const studentId = user._id;
+
+    // --- Validation 1: Find exam, populate course and questions ---
+    const exam = await this.examModel
+      .findOne({ publicId })
+      .populate('courseId') // Lấy thông tin course
+      .populate('questions'); // ⭐️ Lấy toàn bộ câu hỏi
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found.');
+    }
+
+    // --- Validation 2: Check Time & Status ---
+    if (exam.status !== 'scheduled') {
+      throw new BadRequestException('This exam is not active.');
+    }
+    const now = new Date();
+    if (now < exam.startTime) {
+      throw new BadRequestException('This exam has not started yet.');
+    }
+    if (now > exam.endTime) {
+      throw new BadRequestException('This exam has already ended.');
+    }
+
+    // --- Validation 3: Check Enrollment (Student đã đăng ký course?) ---
+    // const enrollment = await this.enrollmentModel.findOne({
+    //   studentId: studentId,
+    //   courseId: (exam.courseId as CourseDocument)._id,
+    // });
+
+    // if (!enrollment) {
+    //   throw new ForbiddenException(
+    //     'You are not enrolled in the course for this exam.',
+    //   );
+    // }
+
+    // --- Validation 4: Check Previous Submission (Đã nộp bài chưa?) ---
+    // Index unique (studentId, examId) sẽ xử lý việc này hiệu quả
+    const existingSubmission = await this.submissionModel.findOne({
+      studentId: studentId,
+      examId: exam._id,
+    });
+
+    if (existingSubmission) {
+      throw new ForbiddenException('You have already submitted this exam.');
+    }
+
+    return new TakeExamResponseDto(exam);
+  }
+
 }
+
+

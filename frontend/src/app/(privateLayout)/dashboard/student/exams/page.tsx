@@ -44,7 +44,7 @@ export default function ExamsPage() {
     if (!selectedExam) return;
     console.log(`Starting exam: ${selectedExam.title} (ID: ${selectedExam.id})`);
     // 'selectedExam.id' bây giờ chính là publicId (E123456)
-    router.push(`/exams/${selectedExam.id}/take`); 
+    router.push(`/dashboard/student/exams/${selectedExam.id}/take`);
 
     setIsConfirmModalOpen(false);
     setSelectedExam(null);

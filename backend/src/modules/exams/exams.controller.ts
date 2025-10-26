@@ -23,7 +23,7 @@ import { ApiResponseDto, ResponseHelper } from '../../common/dto/response.dto';
 import { Roles } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import type { IUser } from '../../common/interfaces';
-import { ExamResponseDto, JoinExamResponseDto } from './dto/exam-response.dto';
+import { ExamResponseDto, JoinExamResponseDto, TakeExamResponseDto } from './dto/exam-response.dto';
 import { JoinExamDto } from './dto/join-exam.dto';
 import type { UserDocument } from 'src/database/schemas/user.schema';
 
@@ -374,5 +374,24 @@ export class ExamsController {
     @CurrentUser() user: UserDocument,
   ): Promise<JoinExamResponseDto> {
     return this.examsService.joinExam(joinExamDto, user);
+  }
+
+  // API get full exam questions for taking (without correct answers)
+  @Get(':publicId/take')
+  @Roles('student') // Chỉ student
+  @ApiOperation({ summary: 'Get full exam questions for taking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the full exam questions (without correct answers).',
+    type: TakeExamResponseDto,
+  })
+  @ApiResponse({ status: 403, description: 'Not enrolled or already submitted.' })
+  @ApiResponse({ status: 404, description: 'Exam not found.' })
+  @ApiResponse({ status: 400, description: 'Exam is not active or has ended.' })
+  async getExamForTaking(
+    @Param('publicId') publicId: string,
+    @CurrentUser() user: UserDocument,
+  ): Promise<TakeExamResponseDto> {
+    return this.examsService.getExamForTaking(publicId, user);
   }
 }

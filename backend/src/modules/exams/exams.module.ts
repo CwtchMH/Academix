@@ -9,12 +9,19 @@ import {
 } from '../../database/schemas/question.schema';
 import { Course, CourseSchema } from '../../database/schemas/course.schema';
 
+import {
+  Submission,
+  SubmissionSchema,
+} from '../../database/schemas/submission.schema';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Exam.name, schema: ExamSchema },
       { name: Question.name, schema: QuestionSchema },
       { name: Course.name, schema: CourseSchema },
+      { name: Submission.name, schema: SubmissionSchema },
+      { name: Question.name, schema: QuestionSchema },
     ]),
   ],
   controllers: [ExamsController],
