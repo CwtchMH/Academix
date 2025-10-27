@@ -25,7 +25,7 @@ import { CurrentUser } from '../../common/decorators/user.decorator';
 import type { IUser } from '../../common/interfaces';
 import { ExamResponseDto, JoinExamResponseDto, TakeExamResponseDto } from './dto/exam-response.dto';
 import { JoinExamDto } from './dto/join-exam.dto';
-import type { UserDocument } from 'src/database/schemas/user.schema';
+import { SubmissionResultDto, SubmitExamDto } from './dto/submission.dto';
 
 @ApiTags('Exams')
 @ApiBearerAuth()
@@ -371,7 +371,7 @@ export class ExamsController {
   @ApiResponse({ status: 404, description: 'Exam not found.' })
   async joinExam(
     @Body() joinExamDto: JoinExamDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() user: IUser,
   ): Promise<JoinExamResponseDto> {
     return this.examsService.joinExam(joinExamDto, user);
   }
@@ -390,8 +390,28 @@ export class ExamsController {
   @ApiResponse({ status: 400, description: 'Exam is not active or has ended.' })
   async getExamForTaking(
     @Param('publicId') publicId: string,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() user: IUser,
   ): Promise<TakeExamResponseDto> {
     return this.examsService.getExamForTaking(publicId, user);
+  }
+
+  // API ĐỂ NỘP BÀI
+  @Post(':publicId/submit')
+  @Roles('student')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Submit answers for an exam' })
+  @ApiResponse({
+    status: 201,
+    description: 'Exam submitted and graded successfully.',
+    type: SubmissionResultDto,
+  })
+  @ApiResponse({ status: 403, description: 'Already submitted.' })
+  @ApiResponse({ status: 400, description: 'Exam has ended.' })
+  async submitExam(
+    @Param('publicId') publicId: string,
+    @CurrentUser() user: IUser,
+    @Body() submitDto: SubmitExamDto,
+  ): Promise<SubmissionResultDto> {
+    return this.examsService.submitExam(publicId, user, submitDto);
   }
 }

@@ -19,10 +19,10 @@ import { ExamSummaryDto } from './dto/exam-summary.dto';
 import { IUser } from '../../common/interfaces';
 import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
 
-import { UserDocument } from '../../database/schemas/user.schema';
 import { JoinExamDto } from './dto/join-exam.dto';
 import { log } from 'console';
 import { Submission, SubmissionDocument } from 'src/database/schemas/submission.schema';
+import { SubmitExamDto, SubmissionResultDto } from './dto/submission.dto';
 
 @Injectable()
 export class ExamsService {
@@ -511,10 +511,10 @@ export class ExamsService {
    */
   async joinExam(
     joinExamDto: JoinExamDto,
-    user: UserDocument,
+    user: IUser,
   ): Promise<JoinExamResponseDto> {
     const { publicId } = joinExamDto;
-    const studentId = user._id;
+    const studentId = user.id;
     log('Student attempting to join exam:', publicId, 'User ID:', studentId);
 
     // --- Validation 1: Find the exam and its course ---
@@ -559,9 +559,9 @@ export class ExamsService {
    */
   async getExamForTaking(
     publicId: string,
-    user: UserDocument,
+    user: IUser,
   ): Promise<TakeExamResponseDto> {
-    const studentId = user._id;
+    const studentId = user.id;
 
     // --- Validation 1: Find exam, populate course and questions ---
     const exam = await this.examModel
@@ -609,6 +609,105 @@ export class ExamsService {
     }
 
     return new TakeExamResponseDto(exam);
+  }
+
+  /**
+   * Submits a student's answers for an exam, calculates the score,
+   * and saves the submission.
+   * @param publicId The exam's public ID
+   * @param user The authenticated student
+   * @param submitDto The student's answers
+   * @returns The detailed exam result
+   */
+  async submitExam(
+    publicId: string,
+    user: IUser,
+    submitDto: SubmitExamDto,
+  ): Promise<SubmissionResultDto> {
+    const studentId = user.id;
+
+    // Find exam (lần này populate cả 'questions' VÀ 'courseId')
+    const exam = await this.examModel
+      .findOne({ publicId })
+      .populate('questions')
+      .populate('courseId');
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found.');
+    }
+    const examId = exam._id;
+
+    // Check time (không cho nộp bài khi đã hết giờ)
+    if (new Date() > exam.endTime) {
+      throw new BadRequestException('The time for this exam has ended.');
+    }
+
+    // Check for existing submission
+    const existingSubmission = await this.submissionModel.findOne({
+      studentId,
+      examId,
+    });
+
+    if (existingSubmission) {
+      throw new ForbiddenException('You have already submitted this exam.');
+    }
+
+    // Chấm điểm (Grading)
+    const questions = exam.questions as unknown as QuestionDocument[];
+    let correctCount = 0;
+
+    // Tạo một Map để tra cứu câu trả lời của student O(1)
+    const answerMap = new Map(
+      submitDto.answers.map((ans) => [ans.questionId, ans.answerNumber]),
+    );
+
+    for (const question of questions) {
+      const questionId = (question._id as Types.ObjectId).toHexString();
+      const studentAnswerNumber = answerMap.get(questionId);
+      // Giả định: `question.answerQuestion` là nguồn tin cậy (1-4)
+      if (studentAnswerNumber === question.answerQuestion) {
+        correctCount++;
+      }
+    }
+
+    const totalQuestions = questions.length;
+    const percentageScore =
+      totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+
+    // Lưu Submission vào DB ---
+    const submissionDate = new Date();
+
+    // Convert DTO answers to Schema answers
+    const submissionAnswers = submitDto.answers.map(ans => ({
+      questionId: new Types.ObjectId(ans.questionId),
+      answerNumber: ans.answerNumber,
+    }));
+
+    const newSubmission = new this.submissionModel({
+      studentId,
+      examId,
+      score: percentageScore,
+      status: 'graded', // Tự động 'graded' vì đã chấm điểm
+      submittedAt: submissionDate,
+      answers: submissionAnswers,
+    });
+
+    await newSubmission.save(); // Lỗi unique index (nộp 2 lần) sẽ được bắt ở đây
+
+    // Tạo Response DTO
+    const course = exam.courseId as unknown as CourseDocument;
+    
+    return {
+      examTitle: exam.title,
+      courseName: course.courseName,
+      dateTaken: submissionDate,
+      totalQuestions: totalQuestions,
+      correctAnswers: correctCount,
+      score: percentageScore,
+      result: percentageScore >= exam.rateScore ? 'Passed' : 'Failed',
+      // ✅ Cast _id về Types.ObjectId trước khi convert sang string
+      submissionId: (newSubmission._id as Types.ObjectId).toHexString(),
+    };
   }
 
 }

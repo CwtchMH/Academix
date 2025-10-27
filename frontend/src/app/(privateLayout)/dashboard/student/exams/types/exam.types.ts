@@ -34,3 +34,30 @@ export interface TakeExamResponse {
   endTime: string;
   questions: TakeExamQuestion[];
 }
+
+
+/**
+ * DTO cho body của request nộp bài
+ * (Khớp với SubmitExamDto)
+ */
+export interface SubmitExamPayload {
+  answers: {
+    questionId: string;
+    answerNumber: number; // 1-4
+  }[];
+}
+
+/**
+ * DTO trả về kết quả sau khi nộp bài
+ * (Khớp với SubmissionResultDto)
+ */
+export interface SubmissionResult {
+  examTitle: string;
+  courseName: string;
+  dateTaken: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  score: number;
+  result: 'Passed' | 'Failed';
+  submissionId: string;
+}

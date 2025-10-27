@@ -1,42 +1,55 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
-import { ExamService } from '@/services';
-import { ConfirmSubmitModal } from '@/components/molecules/ConfirmSubmitModal/ConfirmSubmitModal';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { ExamService } from "@/services";
+import { ConfirmSubmitModal } from "@/components/molecules/ConfirmSubmitModal/ConfirmSubmitModal";
+import { useExamResultStore } from "@/stores/examResult.store";
+import { SubmissionResult, SubmitExamPayload } from "../../types/exam.types";
 import type {
   TakeExamQuestion,
   TakeExamResponse,
-} from '../../types/exam.types';
+} from "../../types/exam.types";
+import type { AxiosError } from "axios";
+import axios from "axios";
 
 type StudentAnswer = {
   questionId: string;
   selectedChoiceIndex: number | null;
 };
 
+interface ErrorResponse {
+  message: string | string[];
+}
+
 const formatTime = (totalSeconds: number): string => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+    2,
+    "0"
+  )}`;
 };
 
 export default function TakeExamPage() {
   const params = useParams();
+  const router = useRouter();
   const publicId = params.publicId as string;
+
+  // ⭐️ Lấy hàm setResult từ store
+  const setResult = useExamResultStore((state) => state.setResult);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [studentAnswers, setStudentAnswers] = useState<StudentAnswer[]>([]);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  
-  // State cho đồng hồ
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
-  // State mới để lưu endTime an toàn (tránh hydration)
   const [examEndTime, setExamEndTime] = useState<string | null>(null);
 
+  // ⭐️ 1. Hook để LẤY BÀI THI
   const {
     data: examData,
-    isLoading,
-    error,
+    isLoading: isExamLoading,
+    error: examError,
   } = ExamService.useGet<TakeExamResponse>({
     url: `/${publicId}/take`,
     options: {
@@ -45,17 +58,45 @@ export default function TakeExamPage() {
     },
   });
 
-  // useEffect để khởi tạo đáp án và lưu durationMinutes
+  // Hook để NỘP BÀI THI
+  const { mutate: submitExam, isPending: isSubmitting } =
+    ExamService.usePost<SubmissionResult>(
+      {
+        url: `/${publicId}/submit`,
+      },
+      {
+        onSuccess: (data) => {
+          // LƯU KẾT QUẢ VÀ CHUYỂN TRANG
+          setResult(data);
+          router.push(`/dashboard/student/exams/${publicId}/result`);
+        },
+        onError: (error: unknown) => {
+          // Type guard để kiểm tra AxiosError
+          if (axios.isAxiosError(error)) {
+            const err = error as AxiosError<ErrorResponse>;
+            const message = err.response?.data?.message || "Submission failed.";
+            alert(
+              `Error: ${Array.isArray(message) ? message.join(", ") : message}`
+            );
+          } else {
+            // Xử lý lỗi không phải từ Axios
+            alert("An unexpected error occurred.");
+          }
+          setIsSubmitModalOpen(false);
+        },
+      }
+    );
+
+  // useEffect để khởi tạo đáp án và lưu endTime
   useEffect(() => {
     if (examData) {
-      // Khởi tạo mảng đáp án
       const initialAnswers = examData.questions.map((q) => ({
         questionId: q.questionId,
         selectedChoiceIndex: null,
       }));
       setStudentAnswers(initialAnswers);
 
-      // Chỉ lưu chuỗi durationMinutes, KHÔNG tính toán ở đây
+            // Chỉ lưu chuỗi durationMinutes, KHÔNG tính toán ở đây
       setExamEndTime(examData.durationMinutes
         ? new Date(Date.now() + examData.durationMinutes * 60 * 1000).toISOString()
         : null
@@ -63,16 +104,28 @@ export default function TakeExamPage() {
     }
   }, [examData]);
 
-  const handleSubmit = useCallback((answers: StudentAnswer[]) => {
-    console.log('Submitting answers:', answers);
-    // TODO: Gọi API nộp bài ở đây
-    
-    setIsSubmitModalOpen(false);
-    // TODO: Chuyển hướng đến trang kết quả sau khi nộp
-    // router.push(`/exams/${publicId}/result`);
-  }, []);
+  // Cập nhật hàm handleSubmit
+  const handleSubmit = useCallback(
+    (answersToSubmit: StudentAnswer[]) => {
+      // Lọc và format payload đúng như API backend yêu cầu
+      const payloadAnswers = answersToSubmit
+        .filter((ans) => ans.selectedChoiceIndex !== null)
+        .map((ans) => ({
+          questionId: ans.questionId,
+          answerNumber: ans.selectedChoiceIndex! + 1, // Convert (0-3) -> (1-4)
+        }));
 
-  // useEffect: Khởi tạo đồng hồ đếm ngược (chỉ chạy ở client)
+      // Gọi API nộp bài
+      submitExam({
+        data: {
+          answers: payloadAnswers,
+        },
+      });
+    },
+    [submitExam]
+  );
+
+  // useEffect: Khởi tạo đồng hồ đếm ngược
   useEffect(() => {
     if (examEndTime) {
       const endTimeMs = new Date(examEndTime).getTime();
@@ -108,25 +161,24 @@ export default function TakeExamPage() {
     return () => clearInterval(timerId);
   }, [remainingTime, studentAnswers, handleSubmit]);
 
-  if (isLoading) {
+  if (isExamLoading) {
     return <div className="p-8 text-center">Loading exam...</div>;
   }
-  
-  if (error) {
+  if (examError) {
     return (
       <div className="p-8 text-center text-red-600">
         <h2 className="text-xl font-bold">Error loading exam</h2>
-        <p>{(error as any).message || 'An unknown error occurred.'}</p>
+        <p>{(examError as any).message || "An unknown error occurred."}</p>
       </div>
     );
   }
-  
+
   if (!examData) {
     return <div className="p-8 text-center">No exam data found.</div>;
   }
 
-  // --- Logic điều hướng câu hỏi ---
-  const currentQuestion: TakeExamQuestion = examData.questions[currentQuestionIndex];
+  const currentQuestion: TakeExamQuestion =
+    examData.questions[currentQuestionIndex];
   const totalQuestions = examData.questions.length;
 
   const handleSelectChoice = (choiceIndex: number) => {
@@ -165,17 +217,21 @@ export default function TakeExamPage() {
               <div className="flex justify-between text-sm text-[var(--medium-text)] mb-1">
                 <span>Time Remaining:</span>
                 <span className="font-bold text-[var(--primary-color)] text-base">
-                  {/* ⭐️ 5. Hiển thị thời gian - tránh hydration mismatch */}
-                  {remainingTime !== null ? formatTime(remainingTime) : '...'}
+                  {remainingTime !== null ? formatTime(remainingTime) : "..."}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div
                   className="bg-[var(--primary-color)] h-2.5 rounded-full transition-all"
                   style={{
-                    width: remainingTime !== null
-                      ? `${(1 - remainingTime / (examData.durationMinutes * 60)) * 100}%`
-                      : '0%'
+                    width:
+                      remainingTime !== null
+                        ? `${
+                            (1 -
+                              remainingTime / (examData.durationMinutes * 60)) *
+                            100
+                          }%`
+                        : "0%",
                   }}
                 ></div>
               </div>
@@ -192,15 +248,16 @@ export default function TakeExamPage() {
             <div className="mt-6 space-y-4">
               {currentQuestion.choices.map((choice, index) => {
                 const isSelected =
-                  studentAnswers[currentQuestionIndex]?.selectedChoiceIndex === index;
+                  studentAnswers[currentQuestionIndex]?.selectedChoiceIndex ===
+                  index;
 
                 return (
                   <label
                     key={index}
                     className={`block w-full p-4 rounded-lg border cursor-pointer transition-all ${
                       isSelected
-                        ? 'border-[var(--primary-color)] bg-blue-50 ring-2 ring-[var(--primary-color)]'
-                        : 'border-gray-300 hover:bg-gray-50'
+                        ? "border-[var(--primary-color)] bg-blue-50 ring-2 ring-[var(--primary-color)]"
+                        : "border-gray-300 hover:bg-gray-50"
                     }`}
                   >
                     <input
@@ -214,8 +271,8 @@ export default function TakeExamPage() {
                       <span
                         className={`w-5 h-5 inline-block mr-4 border rounded-full transition-all ${
                           isSelected
-                            ? 'border-[var(--primary-color)] bg-white'
-                            : 'border-gray-400 bg-white'
+                            ? "border-[var(--primary-color)] bg-white"
+                            : "border-gray-400 bg-white"
                         }`}
                       >
                         {isSelected && (
@@ -260,12 +317,12 @@ export default function TakeExamPage() {
         </div>
       </div>
 
-      {/* Modal nộp bài */}
+      {/* Modal Nộp bài với isLoading từ API */}
       <ConfirmSubmitModal
         isOpen={isSubmitModalOpen}
         onClose={() => setIsSubmitModalOpen(false)}
         onConfirm={() => handleSubmit(studentAnswers)}
-        isLoading={false}
+        isLoading={isSubmitting}
       />
     </>
   );
