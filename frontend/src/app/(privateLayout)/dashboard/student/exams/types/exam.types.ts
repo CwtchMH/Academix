@@ -1,17 +1,18 @@
 export type Exam = {
-  id: string;
-  title: string;
-  courseCode: string;
-  durationInMinutes: number;
-  startTime: Date;
-};
+  id: string
+  title: string
+  courseCode: string
+  status: string
+  durationInMinutes: number
+  startTime: Date
+}
 
 /**
  * DTO cho một lựa chọn câu hỏi (đã lọc đáp án)
  * Khớp với TakeExamChoiceDto
  */
 export interface TakeExamChoice {
-  content: string;
+  content: string
 }
 
 /**
@@ -19,22 +20,21 @@ export interface TakeExamChoice {
  * Khớp với TakeExamQuestionDto
  */
 export interface TakeExamQuestion {
-  questionId: string;
-  content: string;
-  choices: TakeExamChoice[];
+  questionId: string
+  content: string
+  choices: TakeExamChoice[]
 }
 /**
  * DTO response cho API "GET /exams/:publicId/take"
  * Khớp với TakeExamResponseDto
  */
 export interface TakeExamResponse {
-  publicId: string;
-  title: string;
-  durationMinutes: number;
-  endTime: string;
-  questions: TakeExamQuestion[];
+  publicId: string
+  title: string
+  durationMinutes: number
+  endTime: string
+  questions: TakeExamQuestion[]
 }
-
 
 /**
  * DTO cho body của request nộp bài
@@ -42,9 +42,9 @@ export interface TakeExamResponse {
  */
 export interface SubmitExamPayload {
   answers: {
-    questionId: string;
-    answerNumber: number; // 1-4
-  }[];
+    questionId: string
+    answerNumber: number // 1-4
+  }[]
 }
 
 /**
@@ -52,12 +52,12 @@ export interface SubmitExamPayload {
  * (Khớp với SubmissionResultDto)
  */
 export interface SubmissionResult {
-  examTitle: string;
-  courseName: string;
-  dateTaken: string;
-  totalQuestions: number;
-  correctAnswers: number;
-  score: number;
-  result: 'Passed' | 'Failed';
-  submissionId: string;
+  examTitle: string
+  courseName: string
+  dateTaken: string
+  totalQuestions: number
+  correctAnswers: number
+  score: number
+  result: 'Passed' | 'Failed'
+  submissionId: string
 }

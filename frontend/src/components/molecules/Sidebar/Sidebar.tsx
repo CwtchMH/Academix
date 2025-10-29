@@ -4,13 +4,12 @@ import type { SidebarProps } from '@/components/molecules/Sidebar/Sidebar.types'
 import { useAuth } from '@/stores/auth'
 import { usePathname } from 'next/navigation'
 
-// Định nghĩa các menu items với đường dẫn (href)
 const studentMenuItems = [
   {
     id: 'dashboard',
     label: 'Dashboard',
     icon: <Icon name="dashboard" />,
-    href: '/dashboard/student/dashboard'
+    href: '/dashboard/student/'
   },
   {
     id: 'exams',

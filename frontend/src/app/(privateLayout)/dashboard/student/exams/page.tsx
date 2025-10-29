@@ -1,54 +1,56 @@
 // src/app/(privateLayout)/exams/page.tsx
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { JoinExamModal } from '@/components/molecules/JoinExamModal/JoinExamModal';
-import { ExamCard } from '@/components/molecules/ExamCard/ExamCard';
-import { ConfirmStartExamModal } from '@/components/molecules/ConfirmStartExamModal/ConfirmStartExamModal';
-import type { Exam, JoinExamResponseDto } from '@/services/types/api.types';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { JoinExamModal } from '@/components/molecules/JoinExamModal/JoinExamModal'
+import { ExamCard } from '@/components/molecules/ExamCard/ExamCard'
+import { ConfirmStartExamModal } from '@/components/molecules/ConfirmStartExamModal/ConfirmStartExamModal'
+import type { Exam, JoinExamResponseDto } from '@/services/types/api.types'
 
 export default function ExamsPage() {
-  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
-  const [upcomingExams, setUpcomingExams] = useState<Exam[]>([]);
-  const router = useRouter();
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+  const [selectedExam, setSelectedExam] = useState<Exam | null>(null)
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>(
+    'upcoming'
+  )
+  const [upcomingExams, setUpcomingExams] = useState<Exam[]>([])
+  const router = useRouter()
 
   // MAPPING DỮ LIỆU
   // Hàm này được gọi khi API call trong modal thành công
   const handleJoinSuccess = (apiData: JoinExamResponseDto) => {
-    
     // Biến đổi DTO từ backend thành object 'Exam' của frontend
     const newExam: Exam = {
       id: apiData.publicId, // Dùng publicId làm id
       title: apiData.title,
+      status: apiData.status,
       courseCode: apiData.course.publicId, // Dùng publicId của course
       durationInMinutes: apiData.durationMinutes,
-      startTime: new Date(apiData.startTime), // Convert string thành Date
-    };
+      startTime: new Date(apiData.startTime) // Convert string thành Date
+    }
 
     // Thêm bài thi mới vào danh sách (tránh trùng lặp)
-    if (!upcomingExams.find(exam => exam.id === newExam.id)) {
-      setUpcomingExams(prevExams => [...prevExams, newExam]);
+    if (!upcomingExams.find((exam) => exam.id === newExam.id)) {
+      setUpcomingExams((prevExams) => [...prevExams, newExam])
     }
-  };
+  }
 
   const handleStartExamClick = (exam: Exam) => {
-    setSelectedExam(exam);
-    setIsConfirmModalOpen(true);
-  };
+    setSelectedExam(exam)
+    setIsConfirmModalOpen(true)
+  }
 
   const handleConfirmStart = () => {
-    if (!selectedExam) return;
-    console.log(`Starting exam: ${selectedExam.title} (ID: ${selectedExam.id})`);
+    if (!selectedExam) return
+    console.log(`Starting exam: ${selectedExam.title} (ID: ${selectedExam.id})`)
     // 'selectedExam.id' bây giờ chính là publicId (E123456)
-    router.push(`/dashboard/student/exams/${selectedExam.id}/take`);
+    router.push(`/dashboard/student/exams/${selectedExam.id}/take`)
 
-    setIsConfirmModalOpen(false);
-    setSelectedExam(null);
-  };
+    setIsConfirmModalOpen(false)
+    setSelectedExam(null)
+  }
 
   return (
     <>
@@ -94,31 +96,47 @@ export default function ExamsPage() {
           {activeTab === 'upcoming' && (
             <div className="space-y-4">
               {upcomingExams.length > 0 ? (
-                upcomingExams.map(exam => (
-                  <ExamCard 
-                    key={exam.id} 
-                    exam={exam} 
+                upcomingExams.map((exam) => (
+                  <ExamCard
+                    key={exam.id}
+                    exam={exam}
+                    isActive={exam.status === 'active'}
                     onStartClick={handleStartExamClick}
                   />
                 ))
               ) : (
                 <div className="text-center py-12 px-4 bg-white rounded-lg border border-dashed border-gray-300">
                   <div className="mx-auto h-20 w-20 text-[var(--primary-color)] opacity-50">
-                    <svg fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" strokeLinecap="round" strokeLinejoin="round"></path>
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></path>
                     </svg>
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--dark-text)]">No upcoming exams</h3>
+                  <h3 className="mt-4 text-lg font-semibold text-[var(--dark-text)]">
+                    No upcoming exams
+                  </h3>
                   <p className="mt-1 text-sm text-[var(--medium-text)]">
-                    You currently have no scheduled exams. When an exam is scheduled, it will appear here.
+                    You currently have no scheduled exams. When an exam is
+                    scheduled, it will appear here.
                   </p>
                 </div>
               )}
             </div>
           )}
           {activeTab === 'completed' && (
-              <div className="text-center py-12 px-4 bg-white rounded-lg border border-dashed border-gray-300">
-              <p className="text-sm text-[var(--medium-text)]">You have no completed exams.</p>
+            <div className="text-center py-12 px-4 bg-white rounded-lg border border-dashed border-gray-300">
+              <p className="text-sm text-[var(--medium-text)]">
+                You have no completed exams.
+              </p>
             </div>
           )}
         </div>
@@ -138,5 +156,5 @@ export default function ExamsPage() {
         exam={selectedExam}
       />
     </>
-  );
+  )
 }
