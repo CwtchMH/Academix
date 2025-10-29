@@ -23,9 +23,14 @@ import { ApiResponseDto, ResponseHelper } from '../../common/dto/response.dto';
 import { Roles } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import type { IUser } from '../../common/interfaces';
-import { ExamResponseDto, JoinExamResponseDto, TakeExamResponseDto } from './dto/exam-response.dto';
+import {
+  ExamResponseDto,
+  JoinExamResponseDto,
+  TakeExamResponseDto,
+} from './dto/exam-response.dto';
 import { JoinExamDto } from './dto/join-exam.dto';
 import { SubmissionResultDto, SubmitExamDto } from './dto/submission.dto';
+import { ExamResultsResponseDto } from './dto/exam-results.dto';
 
 @ApiTags('Exams')
 @ApiBearerAuth()
@@ -385,7 +390,10 @@ export class ExamsController {
     description: 'Returns the full exam questions (without correct answers).',
     type: TakeExamResponseDto,
   })
-  @ApiResponse({ status: 403, description: 'Not enrolled or already submitted.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Not enrolled or already submitted.',
+  })
   @ApiResponse({ status: 404, description: 'Exam not found.' })
   @ApiResponse({ status: 400, description: 'Exam is not active or has ended.' })
   async getExamForTaking(
@@ -413,5 +421,56 @@ export class ExamsController {
     @Body() submitDto: SubmitExamDto,
   ): Promise<SubmissionResultDto> {
     return this.examsService.submitExam(publicId, user, submitDto);
+  }
+
+  @Get(':id/results')
+  @Roles('teacher')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get exam results for all students' })
+  @ApiResponse({
+    status: 200,
+    description: 'Exam results retrieved successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          exam: {
+            title: 'Midterm Exam',
+            status: 'completed',
+          },
+          results: [
+            {
+              studentId: '652fd6a7e5a69c0012345678',
+              studentName: 'Nguyễn Văn A',
+              studentCode: 'SV001',
+              grade: 85.5,
+              maxGrade: 100,
+              status: 'pass',
+            },
+            {
+              studentId: '652fd6a7e5a69c0012345679',
+              studentName: 'Trần Thị B',
+              studentCode: 'SV002',
+              grade: 65.0,
+              maxGrade: 100,
+              status: 'fail',
+            },
+          ],
+        },
+        message: 'Exam results retrieved successfully',
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Not authorized to view this exam' })
+  @ApiResponse({ status: 404, description: 'Exam not found' })
+  async getExamResults(
+    @Param('id') id: string,
+    @CurrentUser() user: IUser,
+  ): Promise<ApiResponseDto<ExamResultsResponseDto>> {
+    const results = await this.examsService.getExamResults(id, user);
+    return ResponseHelper.success(
+      results,
+      'Exam results retrieved successfully',
+    );
   }
 }

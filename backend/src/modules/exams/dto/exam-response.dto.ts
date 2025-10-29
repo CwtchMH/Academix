@@ -5,7 +5,6 @@ export interface ExamChoiceResponseDto {
   isCorrect: boolean;
 }
 
-
 export interface ExamQuestionResponseDto {
   id: string;
   content: string;
@@ -29,10 +28,31 @@ export interface ExamResponseDto {
 }
 
 import { ApiProperty } from '@nestjs/swagger';
-import  { CourseDocument } from '../../../database/schemas/course.schema';
+import { CourseDocument } from '../../../database/schemas/course.schema';
 import { QuestionDocument } from 'src/database/schemas/question.schema';
 import { ExamDocument } from 'src/database/schemas/exam.schema';
 import { Types } from 'mongoose';
+import { computeExamStatus } from '../../../common/utils/exam.util';
+
+/**
+ * Type utility cho ExamDocument đã được populate('questions')
+ * Sau khi populate, questions sẽ là QuestionDocument[] thay vì Types.ObjectId[]
+ */
+export type ExamWithPopulatedQuestions = Omit<ExamDocument, 'questions'> & {
+  questions: QuestionDocument[];
+};
+
+/**
+ * Type utility cho ExamDocument đã được populate cả 'questions' và 'courseId'
+ * Dùng cho các method như submitExam
+ */
+export type ExamWithPopulatedRelations = Omit<
+  ExamDocument,
+  'questions' | 'courseId'
+> & {
+  questions: QuestionDocument[];
+  courseId: CourseDocument;
+};
 
 class CourseInfoForJoinDto {
   @ApiProperty({ example: 'C123456' })
@@ -71,17 +91,32 @@ export class JoinExamResponseDto {
   @ApiProperty({ example: '2025-12-25T10:00:00.000Z' })
   startTime: Date;
 
+  @ApiProperty({
+    enum: ['scheduled', 'active', 'completed', 'cancelled'],
+    example: 'scheduled',
+    description: 'Status of the exam',
+  })
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+
   @ApiProperty({ type: CourseInfoForJoinDto })
   course: CourseInfoForJoinDto;
 
   constructor(exam: any) {
     // 'exam' là object đã được populate('courseId')
     const course = exam.courseId as CourseDocument;
+    const now = new Date();
 
     this.publicId = exam.publicId;
     this.title = exam.title;
     this.durationMinutes = exam.durationMinutes;
     this.startTime = exam.startTime;
+    this.status = computeExamStatus(
+      now,
+      exam.startTime as Date,
+      exam.endTime as Date,
+      exam.status as string,
+    );
+
     this.course = {
       publicId: course?.publicId || 'N/A',
       courseName: course?.courseName || 'N/A',
@@ -134,14 +169,12 @@ export class TakeExamResponseDto {
   @ApiProperty({ type: [TakeExamQuestionDto] })
   questions: TakeExamQuestionDto[];
 
-  constructor(exam: ExamDocument) {
+  constructor(exam: ExamWithPopulatedQuestions) {
     this.publicId = exam.publicId;
     this.title = exam.title;
     this.durationMinutes = exam.durationMinutes;
     this.endTime = exam.endTime;
-    // Map các câu hỏi đã được populate
-    this.questions = (exam.questions as unknown as QuestionDocument[]).map(
-      (q) => new TakeExamQuestionDto(q),
-    );
+    // Map các câu hỏi đã được populate - type-safe vì đã định nghĩa ExamWithPopulatedQuestions
+    this.questions = exam.questions.map((q) => new TakeExamQuestionDto(q));
   }
 }

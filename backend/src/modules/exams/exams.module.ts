@@ -13,6 +13,7 @@ import {
   Submission,
   SubmissionSchema,
 } from '../../database/schemas/submission.schema';
+import { User, UserSchema } from '../../database/schemas/user.schema';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import {
       { name: Question.name, schema: QuestionSchema },
       { name: Course.name, schema: CourseSchema },
       { name: Submission.name, schema: SubmissionSchema },
-      { name: Question.name, schema: QuestionSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [ExamsController],

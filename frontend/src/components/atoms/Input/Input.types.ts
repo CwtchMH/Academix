@@ -1,6 +1,6 @@
 export interface InputProps {
   placeholder?: string
-  type?: 'text' | 'email' | 'password'
+  type?: 'text' | 'email' | 'password' | 'number'
   value?: string
   onChange?: (value: string) => void
   error?: string
@@ -11,4 +11,6 @@ export interface InputProps {
   name?: string
   id?: string
   required?: boolean
+  min?: number
+  max?: number
 }

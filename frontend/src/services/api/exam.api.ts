@@ -70,10 +70,15 @@ export interface ExamResultEntity {
   status: 'pass' | 'fail'
 }
 
+export interface ExamResultsExamEntity {
+  title: string
+  status: string
+}
+
 export interface ExamResultsResponse {
   success: boolean
   data: {
-    exam: ExamEntity
+    exam: ExamResultsExamEntity
     results: ExamResultEntity[]
   }
   message: string

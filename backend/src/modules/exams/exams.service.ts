@@ -14,15 +14,27 @@ import {
 import { Course, CourseDocument } from '../../database/schemas/course.schema';
 import { CreateExamDto, CreateExamQuestionDto } from './dto/create-exam.dto';
 import { UpdateExamDto, UpdateExamQuestionDto } from './dto/update-exam.dto';
-import { ExamResponseDto, JoinExamResponseDto, TakeExamResponseDto } from './dto/exam-response.dto';
+import {
+  ExamResponseDto,
+  JoinExamResponseDto,
+  TakeExamResponseDto,
+  ExamWithPopulatedQuestions,
+  ExamWithPopulatedRelations,
+} from './dto/exam-response.dto';
 import { ExamSummaryDto } from './dto/exam-summary.dto';
 import { IUser } from '../../common/interfaces';
 import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
+import { computeExamStatus } from '../../common/utils/exam.util';
 
 import { JoinExamDto } from './dto/join-exam.dto';
 import { log } from 'console';
-import { Submission, SubmissionDocument } from 'src/database/schemas/submission.schema';
+import {
+  Submission,
+  SubmissionDocument,
+} from 'src/database/schemas/submission.schema';
 import { SubmitExamDto, SubmissionResultDto } from './dto/submission.dto';
+import { User, UserDocument } from '../../database/schemas/user.schema';
+import { ExamResultsResponseDto, ExamResultDto } from './dto/exam-results.dto';
 
 @Injectable()
 export class ExamsService {
@@ -40,6 +52,8 @@ export class ExamsService {
     // private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Submission.name)
     private submissionModel: Model<SubmissionDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   async createExam(
@@ -163,12 +177,7 @@ export class ExamsService {
     return exams.map((exam) => ({
       id: String(exam._id),
       publicId: exam.publicId,
-      status: this.computeExamStatus(
-        now,
-        exam.startTime,
-        exam.endTime,
-        exam.status,
-      ),
+      status: computeExamStatus(now, exam.startTime, exam.endTime, exam.status),
       startTime: exam.startTime,
       endTime: exam.endTime,
     }));
@@ -307,31 +316,6 @@ export class ExamsService {
       createdAt: exam.createdAt,
       updatedAt: exam.updatedAt,
     };
-  }
-
-  private computeExamStatus(
-    referenceDate: Date,
-    startTime: Date,
-    endTime: Date,
-    currentStatus: string,
-  ): 'scheduled' | 'active' | 'completed' | 'cancelled' {
-    // If exam is cancelled, keep that status
-    if (currentStatus === 'cancelled') {
-      return 'cancelled';
-    }
-
-    // If exam has ended, mark as completed
-    if (referenceDate > endTime) {
-      return 'completed';
-    }
-
-    // If exam is currently running, mark as active
-    if (referenceDate >= startTime && referenceDate <= endTime) {
-      return 'active';
-    }
-
-    // If exam hasn't started yet, keep current status (usually scheduled)
-    return currentStatus as 'scheduled' | 'active' | 'completed' | 'cancelled';
   }
 
   /**
@@ -564,14 +548,18 @@ export class ExamsService {
     const studentId = user.id;
 
     // --- Validation 1: Find exam, populate course and questions ---
-    const exam = await this.examModel
+    const examResult = await this.examModel
       .findOne({ publicId })
       .populate('courseId') // Lấy thông tin course
-      .populate('questions'); // ⭐️ Lấy toàn bộ câu hỏi
+      .populate('questions') // ⭐️ Lấy toàn bộ câu hỏi
+      .exec();
 
-    if (!exam) {
+    if (!examResult) {
       throw new NotFoundException('Exam not found.');
     }
+
+    // Type assertion: exam đã được populate('questions') nên questions là QuestionDocument[]
+    const exam = examResult as unknown as ExamWithPopulatedQuestions;
 
     // --- Validation 2: Check Time & Status ---
     if (exam.status !== 'scheduled') {
@@ -608,6 +596,7 @@ export class ExamsService {
       throw new ForbiddenException('You have already submitted this exam.');
     }
 
+    // Type assertion: exam đã được populate('questions') nên questions là QuestionDocument[]
     return new TakeExamResponseDto(exam);
   }
 
@@ -627,14 +616,17 @@ export class ExamsService {
     const studentId = user.id;
 
     // Find exam (lần này populate cả 'questions' VÀ 'courseId')
-    const exam = await this.examModel
+    const examResult = await this.examModel
       .findOne({ publicId })
       .populate('questions')
       .populate('courseId');
 
-    if (!exam) {
+    if (!examResult) {
       throw new NotFoundException('Exam not found.');
     }
+
+    // Type assertion: exam đã được populate cả 'questions' và 'courseId'
+    const exam = examResult as unknown as ExamWithPopulatedRelations;
     const examId = exam._id;
 
     // Check time (không cho nộp bài khi đã hết giờ)
@@ -652,8 +644,8 @@ export class ExamsService {
       throw new ForbiddenException('You have already submitted this exam.');
     }
 
-    // Chấm điểm (Grading)
-    const questions = exam.questions as unknown as QuestionDocument[];
+    // Chấm điểm (Grading) - type-safe vì đã dùng ExamWithPopulatedRelations
+    const questions = exam.questions;
     let correctCount = 0;
 
     // Tạo một Map để tra cứu câu trả lời của student O(1)
@@ -678,7 +670,7 @@ export class ExamsService {
     const submissionDate = new Date();
 
     // Convert DTO answers to Schema answers
-    const submissionAnswers = submitDto.answers.map(ans => ({
+    const submissionAnswers = submitDto.answers.map((ans) => ({
       questionId: new Types.ObjectId(ans.questionId),
       answerNumber: ans.answerNumber,
     }));
@@ -694,9 +686,9 @@ export class ExamsService {
 
     await newSubmission.save(); // Lỗi unique index (nộp 2 lần) sẽ được bắt ở đây
 
-    // Tạo Response DTO
-    const course = exam.courseId as unknown as CourseDocument;
-    
+    // Tạo Response DTO - type-safe vì exam.courseId đã được populate
+    const course = exam.courseId;
+
     return {
       examTitle: exam.title,
       courseName: course.courseName,
@@ -710,6 +702,102 @@ export class ExamsService {
     };
   }
 
+  /**
+   * Lấy kết quả thi của tất cả học sinh cho một exam
+   * @param examId The MongoDB ObjectId of the exam
+   * @param teacher The authenticated teacher
+   * @returns Danh sách kết quả thi của các học sinh
+   */
+  async getExamResults(
+    examId: string,
+    teacher: IUser,
+  ): Promise<ExamResultsResponseDto> {
+    if (!Types.ObjectId.isValid(examId)) {
+      throw new BadRequestException('Invalid exam ID');
+    }
+
+    // Tìm exam và verify ownership
+    const exam = await this.examModel.findById(examId).exec();
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    // Verify course ownership
+    const course = await this.courseModel.findById(exam.courseId);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (String(course.teacherId) !== teacher.id) {
+      throw new ForbiddenException(
+        'You can only view results for exams in your courses',
+      );
+    }
+
+    // Lấy tất cả submissions cho exam này và populate thông tin student
+    const examObjectId = exam._id as Types.ObjectId;
+
+    const submissions = await this.submissionModel
+      .find({ examId: examObjectId, status: 'graded' })
+      .populate('studentId', 'fullName username')
+      .sort({ score: -1 }) // Sắp xếp theo điểm giảm dần
+      .exec();
+    // Tính toán status của exam (scheduled/active/completed)
+    const now = new Date();
+    const examStatus = computeExamStatus(
+      now,
+      exam.startTime,
+      exam.endTime,
+      exam.status,
+    );
+
+    // Map submissions thành ExamResultDto
+    const results: ExamResultDto[] = [];
+
+    for (const submission of submissions) {
+      // studentId có thể đã được populate thành UserDocument hoặc vẫn là ObjectId
+      let student: UserDocument | null = null;
+      let studentIdStr: string;
+
+      if (submission.studentId instanceof Types.ObjectId) {
+        // Chưa được populate, cần query lại
+        student = await this.userModel.findById(submission.studentId).exec();
+        studentIdStr = submission.studentId.toHexString();
+      } else {
+        // Đã được populate
+        student = submission.studentId as unknown as UserDocument;
+        studentIdStr = (student._id as Types.ObjectId).toHexString();
+      }
+
+      if (!student || !student.username) {
+        // Bỏ qua nếu không tìm thấy student hoặc không có username
+        continue;
+      }
+
+      const grade = submission.score; // Điểm số (0-100)
+      const maxGrade = 100; // Điểm tối đa luôn là 100 vì score là percentage
+      const status: 'pass' | 'fail' = grade >= exam.rateScore ? 'pass' : 'fail';
+
+      // Sử dụng fullName nếu có, nếu không thì fallback sang username
+      // (Một số tài khoản cũ có thể không có fullName)
+      const studentName = student.fullName?.trim() || student.username;
+
+      results.push({
+        studentId: studentIdStr,
+        studentName,
+        studentCode: studentIdStr,
+        grade,
+        maxGrade,
+        status,
+      });
+    }
+
+    return {
+      exam: {
+        title: exam.title,
+        status: examStatus,
+      },
+      results,
+    };
+  }
 }
-
-
