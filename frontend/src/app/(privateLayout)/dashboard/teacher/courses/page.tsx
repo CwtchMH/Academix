@@ -194,11 +194,7 @@ const CoursesPage: React.FC = () => {
 
         {isLoading || isFetching ? (
           <div className="flex items-center justify-center rounded-3xl border border-slate-200 bg-white p-6">
-            <Spin tip="Loading...">
-              <div style={{ height: 200 }}>
-                <p>Loading courses...</p>
-              </div>
-            </Spin>
+            <Spin tip="Loading..."></Spin>
           </div>
         ) : null}
 

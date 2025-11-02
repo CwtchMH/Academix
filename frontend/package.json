@@ -20,6 +20,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.65.0",
+    "recharts": "^3.3.0",
     "sass": "^1.92.1",
     "viem": "^2.37.5",
     "wagmi": "^2.16.9",
