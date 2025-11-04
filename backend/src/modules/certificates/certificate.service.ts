@@ -180,10 +180,8 @@ export class CertificateService {
         `Error in certificate minting process: ${errorMessage}`,
         errorStack,
       );
-      // Certificate đã được lưu với status 'pending'
     }
 
-    // Return populated certificate data
     return await this.certificateModel
       .findById(savedCertificate._id)
       .populate('studentId', 'username email fullName role')
@@ -207,9 +205,7 @@ export class CertificateService {
     const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (studentId) filter.studentId = new Types.ObjectId(studentId);
-    // We'll compute courseId filter after considering courseName and teacherId
 
-    // Date range filter on issuedAt
     if (issuedFrom || issuedTo) {
       const dateFilter: Record<string, Date> = {};
       if (issuedFrom) dateFilter.$gte = new Date(issuedFrom);
@@ -217,7 +213,6 @@ export class CertificateService {
       filter.issuedAt = dateFilter;
     }
 
-    // Build courseId filter from courseId, courseName, teacherId with intersection logic
     let candidateCourseIds: Types.ObjectId[] | undefined;
 
     if (courseId) {
