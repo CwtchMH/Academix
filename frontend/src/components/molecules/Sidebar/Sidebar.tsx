@@ -42,19 +42,7 @@ const teacherMenuItems = [
     id: "exams",
     label: "Exams",
     icon: <Icon name="exams" />,
-    href: "/dashboard/teacher/exams/create",
-  },
-  {
-    id: "students",
-    label: "Students",
-    icon: <Icon name="students" />,
-    href: "/dashboard/teacher/students",
-  },
-  {
-    id: "results",
-    label: "Results",
-    icon: <Icon name="results" />,
-    href: "/dashboard/teacher/results",
+    href: "/dashboard/teacher/exams/",
   },
   {
     id: "certificates",
