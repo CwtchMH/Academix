@@ -20,6 +20,8 @@ import {
 import { ResponseHelper } from '../../common/dto/response.dto';
 import { Roles } from '../../common/decorators/auth.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { CurrentUser } from '../../common/decorators/user.decorator';
+import type { IUser } from '../../common/interfaces';
 
 @ApiTags('Certificates')
 @ApiBearerAuth()
@@ -40,9 +42,17 @@ export class CertificateController {
   @Get()
   @Roles('student', 'teacher', 'admin')
   @ApiOperation({ summary: 'List certificates with filters and pagination' })
-  async list(@Query() query: CertificatesQueryDto) {
+  async list(@Query() query: CertificatesQueryDto, @CurrentUser() user: IUser) {
+    let effectiveQuery: CertificatesQueryDto = { ...query };
+    if (user?.role === 'student') {
+      effectiveQuery = { ...effectiveQuery, studentId: user.id };
+    }
+    if (user?.role === 'teacher') {
+      effectiveQuery = { ...effectiveQuery, teacherId: user.id };
+    }
+
     const { items, total, page, limit } =
-      await this.certificateService.list(query);
+      await this.certificateService.list(effectiveQuery);
     return ResponseHelper.paginated(
       items,
       page || 1,

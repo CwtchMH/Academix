@@ -47,9 +47,5 @@ export const CertificateSchema = SchemaFactory.createForClass(Certificate);
 
 // Indexes
 CertificateSchema.index({ studentId: 1 });
-CertificateSchema.index({ courseId: 1 });
-CertificateSchema.index({ submissionId: 1 });
-CertificateSchema.index({ status: 1 });
-CertificateSchema.index({ tokenId: 1 });
+CertificateSchema.index({ examId: 1 });
 CertificateSchema.index({ transactionHash: 1 });
-CertificateSchema.index({ issuedAt: -1 });

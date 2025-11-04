@@ -1,68 +1,68 @@
-import React from 'react'
-import { Logo, MenuItem, Icon } from '@/components/atoms'
-import type { SidebarProps } from '@/components/molecules/Sidebar/Sidebar.types'
-import { useAuth } from '@/stores/auth'
-import { usePathname } from 'next/navigation'
+import React from "react";
+import { Logo, MenuItem, Icon } from "@/components/atoms";
+import type { SidebarProps } from "@/components/molecules/Sidebar/Sidebar.types";
+import { useAuth } from "@/stores/auth";
+import { usePathname } from "next/navigation";
 
 const studentMenuItems = [
   {
-    id: 'dashboard',
-    label: 'Dashboard',
+    id: "dashboard",
+    label: "Dashboard",
     icon: <Icon name="dashboard" />,
-    href: '/dashboard/student/'
+    href: "/dashboard/student/",
   },
   {
-    id: 'exams',
-    label: 'Exams',
+    id: "exams",
+    label: "Exams",
     icon: <Icon name="exams" />,
-    href: '/dashboard/student/exams'
+    href: "/dashboard/student/exams",
   },
   {
-    id: 'certificates',
-    label: 'Certificates',
+    id: "certificates",
+    label: "Certificates",
     icon: <Icon name="certificates" />,
-    href: '/dashboard/student/certificates'
-  }
-]
+    href: "/certificate",
+  },
+];
 
 const teacherMenuItems = [
   {
-    id: 'dashboard',
-    label: 'Dashboard',
+    id: "dashboard",
+    label: "Dashboard",
     icon: <Icon name="dashboard" />,
-    href: '/dashboard/teacher/'
+    href: "/dashboard/teacher/",
   },
   {
-    id: 'courses',
-    label: 'Courses',
+    id: "courses",
+    label: "Courses",
     icon: <Icon name="courses" />,
-    href: '/dashboard/teacher/courses'
+    href: "/dashboard/teacher/courses",
   },
   {
-    id: 'exams',
-    label: 'Exams',
+    id: "exams",
+    label: "Exams",
     icon: <Icon name="exams" />,
-    href: '/dashboard/teacher/exams/'
+    href: "/dashboard/teacher/exams/",
   },
   {
-    id: 'certificates',
-    label: 'Certificates',
+    id: "certificates",
+    label: "Certificates",
     icon: <Icon name="certificates" />,
-    href: '/dashboard/teacher/certificates'
-  }
-]
+    href: "/dashboard/teacher/certificates",
+  },
+];
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeItem,
   onItemClick,
-  className = '',
+  className = "",
   onLogoClick,
-  isCollapsed = false
+  isCollapsed = false,
 }) => {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   const menuItems =
-    user?.role === 'teacher' ? teacherMenuItems : studentMenuItems
+    user?.role === "teacher" ? teacherMenuItems : studentMenuItems;
 
   return (
     <aside className={`bg-white border-r border-gray-200 h-full ${className}`}>
@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <MenuItem
               key={item.id}
               icon={item.icon}
-              label={isCollapsed ? '' : item.label}
+              label={isCollapsed ? "" : item.label}
               onClick={() => onItemClick?.(item.id, item.href)}
               isActive={activeItem === item.id}
             />
@@ -84,5 +84,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
     </aside>
-  )
-}
+  );
+};

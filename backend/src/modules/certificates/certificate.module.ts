@@ -10,8 +10,10 @@ import {
   Submission,
   SubmissionSchema,
 } from '../../database/schemas/submission.schema';
+import { Exam, ExamSchema } from '../../database/schemas/exam.schema';
 import { CertificateController } from './certificate.controller';
 import { CertificateService } from './certificate.service';
+import { BlockchainService } from '../../common/services/blockchain.service';
 
 @Module({
   imports: [
@@ -20,10 +22,11 @@ import { CertificateService } from './certificate.service';
       { name: User.name, schema: UserSchema },
       { name: Course.name, schema: CourseSchema },
       { name: Submission.name, schema: SubmissionSchema },
+      { name: Exam.name, schema: ExamSchema },
     ]),
   ],
   controllers: [CertificateController],
-  providers: [CertificateService],
+  providers: [CertificateService, BlockchainService],
   exports: [CertificateService],
 })
 export class CertificateModule {}
