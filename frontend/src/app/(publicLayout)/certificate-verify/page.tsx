@@ -1,3 +1,4 @@
+"use client";
 import SearchFilter, {
   SearchFilterType,
 } from "@/components/certificate/SearchFilter";

@@ -587,9 +587,11 @@ export class ExamsService {
 
     // --- Validation 4: Check Previous Submission (Đã nộp bài chưa?) ---
     // Index unique (studentId, examId) sẽ xử lý việc này hiệu quả
+    const examObjectId = exam._id as Types.ObjectId;
+    const studentObjectId = new Types.ObjectId(studentId);
     const existingSubmission = await this.submissionModel.findOne({
-      studentId: studentId,
-      examId: exam._id,
+      studentId: studentObjectId,
+      examId: examObjectId,
     });
 
     if (existingSubmission) {
@@ -627,7 +629,8 @@ export class ExamsService {
 
     // Type assertion: exam đã được populate cả 'questions' và 'courseId'
     const exam = examResult as unknown as ExamWithPopulatedRelations;
-    const examId = exam._id;
+    const examId = exam._id as Types.ObjectId;
+    const studentObjectId = new Types.ObjectId(studentId);
 
     // Check time (không cho nộp bài khi đã hết giờ)
     if (new Date() > exam.endTime) {
@@ -636,8 +639,8 @@ export class ExamsService {
 
     // Check for existing submission
     const existingSubmission = await this.submissionModel.findOne({
-      studentId,
-      examId,
+      studentId: studentObjectId,
+      examId: examId,
     });
 
     if (existingSubmission) {
@@ -676,8 +679,8 @@ export class ExamsService {
     }));
 
     const newSubmission = new this.submissionModel({
-      studentId,
-      examId,
+      studentId: studentObjectId,
+      examId: examId,
       score: percentageScore,
       status: 'graded', // Tự động 'graded' vì đã chấm điểm
       submittedAt: submissionDate,

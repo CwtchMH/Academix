@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsDateString,
   IsEnum,
   IsMongoId,
   IsOptional,
@@ -18,43 +17,11 @@ export class IssueCertificateDto {
   studentId: string;
 
   @ApiProperty({
-    description: 'Course ID',
+    description: 'Exam ID',
     example: '507f1f77bcf86cd799439012',
   })
   @IsMongoId()
-  courseId: string;
-
-  @ApiProperty({
-    description: 'Submission ID used as basis for issuance',
-    example: '507f1f77bcf86cd799439013',
-  })
-  @IsMongoId()
-  submissionId: string;
-
-  @ApiPropertyOptional({ description: 'Blockchain token ID' })
-  @IsOptional()
-  @IsString()
-  tokenId?: string;
-
-  @ApiPropertyOptional({ description: 'IPFS content hash' })
-  @IsOptional()
-  @IsString()
-  ipfsHash?: string;
-
-  @ApiPropertyOptional({ description: 'Blockchain transaction hash' })
-  @IsOptional()
-  @IsString()
-  transactionHash?: string;
-
-  @ApiPropertyOptional({ description: 'Issued at date (ISO string)' })
-  @IsOptional()
-  @IsDateString()
-  issuedAt?: string;
-
-  @ApiPropertyOptional({ description: 'Outdate/expiration date (ISO string)' })
-  @IsOptional()
-  @IsDateString()
-  outdateTime?: string;
+  examId: string;
 }
 
 export class RevokeCertificateDto {
@@ -86,6 +53,28 @@ export class CertificatesQueryDto {
   @IsOptional()
   @IsMongoId()
   courseId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by teacher ID (via course.teacherId)',
+  })
+  @IsOptional()
+  @IsMongoId()
+  teacherId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by course name (partial match)' })
+  @IsOptional()
+  @IsString()
+  courseName?: string;
+
+  @ApiPropertyOptional({ description: 'Issued from date (ISO string)' })
+  @IsOptional()
+  @IsString()
+  issuedFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Issued to date (ISO string)' })
+  @IsOptional()
+  @IsString()
+  issuedTo?: string;
 
   @ApiPropertyOptional({ description: 'Page number', default: 1 })
   @IsOptional()
