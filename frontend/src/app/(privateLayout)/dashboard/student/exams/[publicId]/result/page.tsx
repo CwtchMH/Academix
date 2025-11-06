@@ -1,4 +1,3 @@
-// src/app/(privateLayout)/dashboard/student/exams/[publicId]/result/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,6 +6,7 @@ import { useExamResultStore } from '@/stores/examResult.store';
 
 export default function ExamResultPage() {
   const router = useRouter();
+  // Lấy state từ store
   const result = useExamResultStore((state) => state.result);
   const clearResult = useExamResultStore((state) => state.clearResult);
 
@@ -18,9 +18,8 @@ export default function ExamResultPage() {
     setIsClient(true);
   }, []);
 
-  // Effect 2: Xử lý chuyển hướng
+  // Effect 2: Xử lý chuyển hướng (nếu F5 hoặc vào trực tiếp)
   useEffect(() => {
-    console.log('ExamResultPage: isClient=', isClient, ' result=', result);
     if (isClient && !result) {
       router.replace('/dashboard/student/exams');
     }
@@ -40,16 +39,14 @@ export default function ExamResultPage() {
 
   // Effect 4: Dọn dẹp store (chỉ lên lịch dọn dẹp KHI đã ở client)
   useEffect(() => {
-    // Chỉ chạy effect này sau khi 'isClient' là true
     if (isClient) {
-      // Hàm cleanup này sẽ được đăng ký
       return () => {
         clearResult();
       };
     }
-  }, [isClient, clearResult]); // Thêm 'isClient' vào dependency
+  }, [isClient, clearResult]);
 
-  // Chống hydration
+  // Chống hydration: Server và Client CÙNG render "Loading..."
   if (!isClient || !result) {
     return <div className="p-8 text-center">Loading results...</div>;
   }
@@ -105,7 +102,7 @@ export default function ExamResultPage() {
             </div>
           </div>
 
-          {/* Cột 2: Tổng quan (giữ nguyên) */}
+          {/* Cột 2: Tổng quan */}
           <div className="md:col-span-1 bg-white rounded-lg shadow-sm border border-gray-200 p-8 flex flex-col items-center justify-center">
             <h2 className="text-xl font-semibold text-[var(--dark-text)] mb-4">
               Overall Result

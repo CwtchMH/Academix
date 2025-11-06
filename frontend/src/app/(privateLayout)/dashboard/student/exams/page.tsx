@@ -1,56 +1,68 @@
-// src/app/(privateLayout)/exams/page.tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { JoinExamModal } from '@/components/molecules/JoinExamModal/JoinExamModal'
-import { ExamCard } from '@/components/molecules/ExamCard/ExamCard'
-import { ConfirmStartExamModal } from '@/components/molecules/ConfirmStartExamModal/ConfirmStartExamModal'
-import type { Exam, JoinExamResponseDto } from '@/services/types/api.types'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { JoinExamModal } from '@/components/molecules/JoinExamModal/JoinExamModal';
+import { ExamCard } from '@/components/molecules/ExamCard/ExamCard';
+import { ConfirmStartExamModal } from '@/components/molecules/ConfirmStartExamModal/ConfirmStartExamModal';
+import { CompletedExamCard } from '@/components/molecules/CompletedExamCard/CompletedExamCard';
+import { ExamService } from '@/services/index';
+import type {
+  Exam,
+  JoinExamResponseDto,
+  CompletedExamResponse,
+} from '@/services/types/api.types';
+import axios, { AxiosError } from 'axios';
 
 export default function ExamsPage() {
-  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
-  const [selectedExam, setSelectedExam] = useState<Exam | null>(null)
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>(
-    'upcoming'
-  )
-  const [upcomingExams, setUpcomingExams] = useState<Exam[]>([])
-  const router = useRouter()
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
+  const [upcomingExams, setUpcomingExams] = useState<Exam[]>([]);
+  const router = useRouter();
+
+  // Hook để gọi API cho tab "Completed"
+  const {
+    data: completedExams,
+    isLoading: isLoadingCompleted,
+    error: completedError,
+  } = ExamService.useGet<CompletedExamResponse[]>({
+    url: '/my-completed',
+    options: {
+      enabled: activeTab === 'completed', // Chỉ gọi khi tab được chọn
+      // staleTime: 5 * 60 * 1000, // Cache 5 phút
+    },
+  });
 
   // MAPPING DỮ LIỆU
-  // Hàm này được gọi khi API call trong modal thành công
   const handleJoinSuccess = (apiData: JoinExamResponseDto) => {
-    // Biến đổi DTO từ backend thành object 'Exam' của frontend
     const newExam: Exam = {
-      id: apiData.publicId, // Dùng publicId làm id
+      id: apiData.publicId,
       title: apiData.title,
       status: apiData.status,
-      courseCode: apiData.course.publicId, // Dùng publicId của course
+      courseCode: apiData.course.publicId,
       durationInMinutes: apiData.durationMinutes,
-      startTime: new Date(apiData.startTime) // Convert string thành Date
-    }
+      startTime: new Date(apiData.startTime),
+    };
 
-    // Thêm bài thi mới vào danh sách (tránh trùng lặp)
     if (!upcomingExams.find((exam) => exam.id === newExam.id)) {
-      setUpcomingExams((prevExams) => [...prevExams, newExam])
+      setUpcomingExams((prevExams) => [...prevExams, newExam]);
     }
-  }
+  };
 
   const handleStartExamClick = (exam: Exam) => {
-    setSelectedExam(exam)
-    setIsConfirmModalOpen(true)
-  }
+    setSelectedExam(exam);
+    setIsConfirmModalOpen(true);
+  };
 
   const handleConfirmStart = () => {
-    if (!selectedExam) return
-    console.log(`Starting exam: ${selectedExam.title} (ID: ${selectedExam.id})`)
-    // 'selectedExam.id' bây giờ chính là publicId (E123456)
-    router.push(`/dashboard/student/exams/${selectedExam.id}/take`)
-
-    setIsConfirmModalOpen(false)
-    setSelectedExam(null)
-  }
+    if (!selectedExam) return;
+    console.log(`Starting exam: ${selectedExam.title} (ID: ${selectedExam.id})`);
+    router.push(`/dashboard/student/exams/${selectedExam.id}/take`);
+    setIsConfirmModalOpen(false);
+    setSelectedExam(null);
+  };
 
   return (
     <>
@@ -91,7 +103,6 @@ export default function ExamsPage() {
           </nav>
         </div>
 
-        {/* Tab Content */}
         <div className="mt-8">
           {activeTab === 'upcoming' && (
             <div className="space-y-4">
@@ -106,49 +117,62 @@ export default function ExamsPage() {
                 ))
               ) : (
                 <div className="text-center py-12 px-4 bg-white rounded-lg border border-dashed border-gray-300">
-                  <div className="mx-auto h-20 w-20 text-[var(--primary-color)] opacity-50">
-                    <svg
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      ></path>
-                    </svg>
-                  </div>
+                  {/* ... (icon và text "No upcoming exams") ... */}
                   <h3 className="mt-4 text-lg font-semibold text-[var(--dark-text)]">
                     No upcoming exams
                   </h3>
                   <p className="mt-1 text-sm text-[var(--medium-text)]">
-                    You currently have no scheduled exams. When an exam is
-                    scheduled, it will appear here.
+                    You currently have no scheduled exams.
                   </p>
                 </div>
               )}
             </div>
           )}
+
+          {/* --- TAB COMPLETED (Mới) --- */}
           {activeTab === 'completed' && (
-            <div className="text-center py-12 px-4 bg-white rounded-lg border border-dashed border-gray-300">
-              <p className="text-sm text-[var(--medium-text)]">
-                You have no completed exams.
-              </p>
+            <div className="space-y-4">
+              {isLoadingCompleted && (
+                <div className="text-center py-12 text-sm text-[var(--medium-text)]">
+                  Loading completed exams...
+                </div>
+              )}
+              {/* ⭐️ Hiển thị lỗi 403 thân thiện */}
+              {completedError && (
+                 <div className="text-center py-12 text-red-600">
+                  <h3 className="text-lg font-semibold">Failed to load exams</h3>
+                  <p className="text-sm mt-1">
+                    Error: {(completedError as AxiosError).response?.status === 403 
+                      ? "You do not have permission to view this." 
+                      : (completedError as AxiosError).message}
+                  </p>
+                </div>
+              )}
+              {!isLoadingCompleted && completedExams && completedExams.length > 0 && (
+                completedExams.map((exam) => (
+                  <CompletedExamCard key={exam.submissionId} exam={exam} />
+                ))
+              )}
+              {!isLoadingCompleted && (!completedExams || completedExams.length === 0) && (
+                <div className="text-center py-12 px-4 bg-white rounded-lg border border-dashed border-gray-300">
+                  <h3 className="mt-4 text-lg font-semibold text-[var(--dark-text)]">
+                    No completed exams
+                  </h3>
+                  <p className="mt-1 text-sm text-[var(--medium-text)]">
+                    You have not completed any exams yet.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Render Modals */}
       <JoinExamModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
         onJoinSuccess={handleJoinSuccess}
       />
-
       <ConfirmStartExamModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
@@ -156,5 +180,5 @@ export default function ExamsPage() {
         exam={selectedExam}
       />
     </>
-  )
+  );
 }

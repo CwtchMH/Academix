@@ -31,12 +31,27 @@ import {
 import { JoinExamDto } from './dto/join-exam.dto';
 import { SubmissionResultDto, SubmitExamDto } from './dto/submission.dto';
 import { ExamResultsResponseDto } from './dto/exam-results.dto';
+import { CompletedExamResponseDto } from './dto/completed-exam.dto';
+
 
 @ApiTags('Exams')
 @ApiBearerAuth()
 @Controller('exams')
 export class ExamsController {
   constructor(private readonly examsService: ExamsService) {}
+
+  @Get('my-completed')
+  @Roles('student')
+  @ApiOperation({ summary: 'Get all completed exams for the current student' })
+  @ApiResponse({
+    status: 200,
+    type: [CompletedExamResponseDto],
+  })
+  async getMyCompletedExams(
+    @CurrentUser() user: IUser,
+  ): Promise<CompletedExamResponseDto[]> {
+    return this.examsService.getMyCompletedExams(user);
+  }
 
   @Get('teacher/:teacherId')
   @Roles('student', 'teacher', 'admin')
@@ -473,4 +488,19 @@ export class ExamsController {
       'Exam results retrieved successfully',
     );
   }
+
+  @Get('submissions/:submissionId/result')
+  @Roles('student')
+  @ApiOperation({ summary: 'Get a specific exam result by submission ID' })
+  @ApiResponse({
+    status: 200,
+    type: SubmissionResultDto,
+  })
+  async getSubmissionResult(
+    @Param('submissionId') submissionId: string,
+    @CurrentUser() user: IUser,
+  ): Promise<SubmissionResultDto> {
+    return this.examsService.getSubmissionResult(submissionId, user);
+  }
 }
+
