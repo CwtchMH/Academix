@@ -17,6 +17,7 @@ import {
 } from 'src/database/schemas/submission.schema';
 import { Exam, ExamDocument } from 'src/database/schemas/exam.schema';
 import { BlockchainService } from '../../common/services/blockchain.service';
+import { CertificateGenerationService } from '../../common/services/certificate-generation.service';
 
 @Injectable()
 export class CertificateService {
@@ -34,6 +35,7 @@ export class CertificateService {
     @InjectModel(Exam.name)
     private readonly examModel: Model<ExamDocument>,
     private readonly blockchainService: BlockchainService,
+    private readonly certificateGenerationService: CertificateGenerationService,
   ) {}
 
   async issue(dto: IssueCertificateDto) {
@@ -63,7 +65,7 @@ export class CertificateService {
     const student = await this.userModel.findById(dto.studentId);
     if (!student) throw new NotFoundException('Student not found');
 
-    student.walletAddress = '0x0887e336dcded20063abe111aa67ec1ac8690887';
+    student.walletAddress = '0x80812e3ac51e98cfd368945baf5ab3979706a48c';
 
     const certificate = new this.certificateModel({
       studentId: new Types.ObjectId(dto.studentId),
@@ -81,37 +83,58 @@ export class CertificateService {
 
     try {
       // 1. Tạo token ID từ certificate._id (chuyển sang string để dùng làm tokenId)
-      // const certificateId = savedCertificate._id as Types.ObjectId;
-      // const tokenId = certificateId.toString();
-      // random tokenId for testing
-      const tokenId = Math.floor(Math.random() * 1000000).toString();
-      // 2. Tạo certificate metadata
-      // TODO: Implement IPFS service để upload metadata
-      // Certificate metadata structure:
-      // const course = await this.courseModel.findById(exam.courseId);
-      // {
-      //   certificateId: tokenId,
-      //   studentName: student.fullName,
-      //   studentEmail: student.email,
-      //   courseName: course?.courseName || 'Unknown Course',
-      //   examTitle: exam.title,
-      //   score: submission.score,
-      //   issuedAt: new Date().toISOString(),
-      //   issuer: 'Academix Education Platform',
-      // }
-      // const ipfsHash = await this.ipfsService.upload(certificateMetadata);
+      const certificateId = String(savedCertificate._id);
+      const tokenId = certificateId; // Sử dụng certificate ID làm tokenId
 
-      // 3. Upload certificate metadata lên IPFS
-      // Tạm thời dùng placeholder IPFS hash
-      const ipfsHash = `QmPlaceholder${tokenId.substring(0, 10)}`; // Placeholder
+      // 2. Tạo ảnh certificate và upload lên Pinata IPFS
+      let imageIpfsHash: string | undefined;
+      let metadataIpfsHash: string | undefined;
 
-      // 4. Kiểm tra wallet address của student
+      try {
+        this.logger.log(
+          `Generating certificate image and uploading to Pinata for certificate: ${certificateId}`,
+        );
+
+        const generationResult =
+          await this.certificateGenerationService.generateAndUploadCertificate(
+            certificateId,
+          );
+
+        imageIpfsHash = generationResult.imageIpfsHash;
+        metadataIpfsHash = generationResult.metadataIpfsHash;
+
+        this.logger.log(
+          `Certificate assets uploaded to Pinata. Image IPFS: ${imageIpfsHash}, Metadata IPFS: ${metadataIpfsHash}`,
+        );
+
+        // Update certificate với metadata IPFS hash từ Pinata
+        savedCertificate.ipfsHash = metadataIpfsHash;
+        await savedCertificate.save();
+      } catch (pinataError: unknown) {
+        const errorMessage =
+          pinataError instanceof Error ? pinataError.message : 'Unknown error';
+        this.logger.error(
+          `Error uploading certificate to Pinata: ${errorMessage}`,
+          pinataError instanceof Error ? pinataError.stack : undefined,
+        );
+        // Tiếp tục với placeholder nếu upload Pinata fail
+        const placeholderHash = `QmPlaceholder${tokenId.substring(0, 10)}`;
+        metadataIpfsHash = placeholderHash;
+        this.logger.warn(
+          `Using placeholder IPFS hash due to Pinata upload failure`,
+        );
+        savedCertificate.ipfsHash = metadataIpfsHash;
+        await savedCertificate.save();
+      }
+
+      // 3. Kiểm tra wallet address của student
       if (!student.walletAddress) {
         const studentIdStr = (student._id as Types.ObjectId).toString();
         this.logger.warn(
           `Student ${studentIdStr} does not have wallet address. Certificate created but not minted on blockchain.`,
         );
         // Nếu không có wallet address, trả về certificate với status 'pending'
+        // Certificate đã có IPFS hash từ Pinata (nếu upload thành công)
         return await this.certificateModel
           .findById(savedCertificate._id)
           .populate('studentId', 'username email fullName role')
@@ -120,7 +143,7 @@ export class CertificateService {
           .lean();
       }
 
-      // 5. Mint certificate trên blockchain
+      // 4. Mint certificate trên blockchain với IPFS hash từ Pinata
       this.logger.log(
         `Minting certificate on blockchain: tokenId=${tokenId}, recipient=${student.walletAddress}`,
       );
@@ -129,13 +152,16 @@ export class CertificateService {
       try {
         transactionHash = await this.blockchainService.issueCertificate({
           tokenId: tokenId,
-          ipfsHash: ipfsHash,
+          ipfsHash: metadataIpfsHash ?? '',
           recipientAddress: student.walletAddress,
         });
 
-        // 6. Update certificate với tokenId, ipfsHash, transactionHash và status
+        // 5. Update certificate với tokenId, ipfsHash (đã có từ Pinata), transactionHash và status
         savedCertificate.tokenId = tokenId;
-        savedCertificate.ipfsHash = ipfsHash;
+        // ipfsHash đã được update từ bước upload Pinata
+        if (!savedCertificate.ipfsHash && metadataIpfsHash) {
+          savedCertificate.ipfsHash = metadataIpfsHash;
+        }
         savedCertificate.transactionHash = transactionHash;
         savedCertificate.status = 'issued';
         await savedCertificate.save();

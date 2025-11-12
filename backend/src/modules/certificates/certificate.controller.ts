@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CertificateService } from './certificate.service';
+import { CertificateGenerationService } from '../../common/services/certificate-generation.service';
 import {
   IssueCertificateDto,
   CertificatesQueryDto,
@@ -28,7 +29,10 @@ import type { IUser } from '../../common/interfaces';
 @UseGuards(RolesGuard)
 @Controller('certificates')
 export class CertificateController {
-  constructor(private readonly certificateService: CertificateService) {}
+  constructor(
+    private readonly certificateService: CertificateService,
+    private readonly certificateGenerationService: CertificateGenerationService,
+  ) {}
 
   @Post('issue')
   @Roles('teacher', 'admin')
@@ -116,5 +120,26 @@ export class CertificateController {
       dto?.transactionHash,
     );
     return ResponseHelper.success(updated, 'Certificate revoked');
+  }
+
+  @Post(':id/generate')
+  @Roles('teacher', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generate certificate image and upload to Pinata IPFS',
+  })
+  async generateCertificate(@Param('id') id: string) {
+    const result =
+      await this.certificateGenerationService.generateAndUploadCertificate(id);
+    return ResponseHelper.success(
+      {
+        imageIpfsHash: result.imageIpfsHash,
+        metadataIpfsHash: result.metadataIpfsHash,
+        imageGatewayUrl: result.gatewayUrl,
+        metadataGatewayUrl: result.metadataGatewayUrl,
+        metadata: result.metadata,
+      },
+      'Certificate image generated and uploaded successfully',
+    );
   }
 }

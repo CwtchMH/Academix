@@ -14,6 +14,9 @@ import { Exam, ExamSchema } from '../../database/schemas/exam.schema';
 import { CertificateController } from './certificate.controller';
 import { CertificateService } from './certificate.service';
 import { BlockchainService } from '../../common/services/blockchain.service';
+import { PinataService } from '../../common/services/pinata.service';
+import { CertificateImageService } from '../../common/services/certificate-image.service';
+import { CertificateGenerationService } from '../../common/services/certificate-generation.service';
 
 @Module({
   imports: [
@@ -26,7 +29,13 @@ import { BlockchainService } from '../../common/services/blockchain.service';
     ]),
   ],
   controllers: [CertificateController],
-  providers: [CertificateService, BlockchainService],
+  providers: [
+    CertificateService,
+    BlockchainService,
+    PinataService,
+    CertificateImageService,
+    CertificateGenerationService,
+  ],
   exports: [CertificateService],
 })
 export class CertificateModule {}
