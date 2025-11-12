@@ -100,7 +100,7 @@ export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess }: JoinExamModalP
                 className="text-[var(--medium-text)] hover:text-[var(--dark-text)] p-1 rounded-full hover:bg-gray-100"
                 disabled={isPending} // Dùng isPending
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined">Close</span>
               </button>
             </div>
             <div className="mt-6">
@@ -136,7 +136,7 @@ export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess }: JoinExamModalP
             </button>
             <button
               onClick={handleJoinExam}
-              className="btn-primary px-6 py-2 text-sm font-semibold rounded-md shadow-sm disabled:opacity-50"
+              className="btn-primary !text-white px-6 py-2 text-sm font-semibold rounded-md shadow-sm disabled:opacity-50"
               disabled={isPending || examCode.length === 0}
             >
               {isPending ? 'Joining...' : 'Join Exam'}

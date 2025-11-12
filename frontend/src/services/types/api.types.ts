@@ -19,3 +19,17 @@ export interface JoinExamResponseDto {
     courseName: string
   }
 }
+
+/**
+ * DTO trả về cho mỗi card trong tab "Completed"
+ * (Khớp với CompletedExamResponseDto)
+ */
+export interface CompletedExamResponse {
+  submissionId: string;
+  examPublicId: string;
+  examTitle: string;
+  courseName: string;
+  score: number;
+  result: 'Passed' | 'Failed';
+  submittedAt: string;
+}
