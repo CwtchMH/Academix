@@ -14,10 +14,13 @@ import type {
 } from '@/services/types/api.types';
 import axios, { AxiosError } from 'axios';
 import Button from '@/components/atoms/Button/Button';
+import { FaceVerificationModal } from '@/components/organisms/FaceVerificationModal/FaceVerificationModal';
 
 export default function ExamsPage() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+
+  const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
   const [upcomingExams, setUpcomingExams] = useState<Exam[]>([]);
@@ -60,8 +63,22 @@ export default function ExamsPage() {
   const handleConfirmStart = () => {
     if (!selectedExam) return;
     console.log(`Starting exam: ${selectedExam.title} (ID: ${selectedExam.id})`);
-    router.push(`/dashboard/student/exams/${selectedExam.id}/take`);
     setIsConfirmModalOpen(false);
+    setIsFaceModalOpen(true); // Mở modal AI thay vì chuyển trang ngay
+  };
+
+  // Hàm này sẽ được gọi bởi FaceVerificationModal khi thành công
+  const handleVerificationSuccess = () => {
+    if (!selectedExam) return;
+    
+    console.log(`Face verified! Starting exam: ${selectedExam.title}`);
+    
+    // Đóng modal AI
+    setIsFaceModalOpen(false);
+    
+    router.push(`/dashboard/student/exams/${selectedExam.id}/take`);
+
+    // Dọn dẹp state
     setSelectedExam(null);
   };
 
@@ -181,6 +198,12 @@ export default function ExamsPage() {
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleConfirmStart}
         exam={selectedExam}
+      />
+
+      <FaceVerificationModal
+        isOpen={isFaceModalOpen}
+        onClose={() => setIsFaceModalOpen(false)}
+        onSuccess={handleVerificationSuccess}
       />
     </>
   );

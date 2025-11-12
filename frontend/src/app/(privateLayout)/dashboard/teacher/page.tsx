@@ -79,7 +79,7 @@ export default function TeacherDashboardPage() {
     }
 
     return apiRecords
-      .slice(0, 6)
+      .slice(0, 10)
       .map(({ examId, examName, passCount, failCount }) => ({
         examId,
         examName,
