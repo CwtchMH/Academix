@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsOptional,
   IsDateString,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -117,3 +118,15 @@ export class UpdateProfileDto {
   @MinLength(1)
   imageUrl?: string;
 }
+
+
+export class VerifyFaceDto {
+  @ApiProperty({
+    description: 'Base64 encoded string of the webcam snapshot (image/jpeg)',
+    example: 'data:image/jpeg;base64,/9j/4AAQSkZJRg...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  webcamImage: string;
+}
+
