@@ -75,7 +75,7 @@ export const CompletedExamCard = ({ exam }: CompletedExamCardProps) => {
       <button
         onClick={handleViewResult}
         disabled={isLoading}
-        className="btn-primary flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium shadow-sm"
+        className="btn-primary !text-white flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium shadow-sm"
       >
         {/* <span className="material-symbols-outlined text-base">visibility</span> */}
         <span className="truncate">

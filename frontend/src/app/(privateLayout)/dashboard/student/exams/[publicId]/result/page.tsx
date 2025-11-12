@@ -126,7 +126,7 @@ export default function ExamResultPage() {
             {isPassed && (
               <button
                 // onClick={() => router.push(`/certificates/${result.submissionId}`)}
-                className="btn-primary w-full flex items-center justify-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold shadow-sm mt-8"
+                className="btn-primary !text-white text-lg w-full flex items-center justify-center gap-2 rounded-md px-5 py-2.5 font-bold shadow-sm mt-8"
               >
                 {/* <span className="material-symbols-outlined text-base">
                   workspace_premium

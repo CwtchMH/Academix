@@ -13,6 +13,7 @@ import type {
   CompletedExamResponse,
 } from '@/services/types/api.types';
 import axios, { AxiosError } from 'axios';
+import Button from '@/components/atoms/Button/Button';
 
 export default function ExamsPage() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -72,13 +73,15 @@ export default function ExamsPage() {
           <h2 className="text-3xl font-bold tracking-tight text-[var(--dark-text)]">
             Exams
           </h2>
-          <button
+          <Button
+            variant="primary"
+            size="medium"
             onClick={() => setIsJoinModalOpen(true)}
-            className="btn-primary flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium shadow-sm"
+            className="btn-primary flex items-center gap-2 rounded-md px-4 py-2 text-sm !font-bold shadow-sm"
           >
             {/* <span className="material-symbols-outlined text-base">add_circle</span> */}
             <span className="truncate">Join Exam by Code</span>
-          </button>
+          </Button>
         </div>
 
         {/* Tabs */}
