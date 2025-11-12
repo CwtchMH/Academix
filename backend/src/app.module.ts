@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
+import pinataConfig from './config/pinata.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { CertificateModule } from './modules/certificates/certificate.module';
@@ -38,7 +39,7 @@ import {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, jwtConfig],
+      load: [appConfig, databaseConfig, jwtConfig, pinataConfig],
       envFilePath: '.env',
     }),
     MongooseModule.forRootAsync({
