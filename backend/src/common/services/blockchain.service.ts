@@ -5,8 +5,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CONTRACT_ABI } from '../utils/abi';
-import { CONTRACT_ADDRESS } from '../utils/constant';
+import { CONTRACT_ABI_2 as NFT_CONTRACT_ABI } from '../utils/abi';
+import { CONTRACT_ADDRESS, DEFAULT_NFT_RECIPIENT } from '../utils/constant';
 
 // Dynamic import ethers để tránh lỗi khi chưa cài package
 // Cần cài đặt: npm install ethers@^6.0.0
@@ -20,9 +20,9 @@ try {
 }
 
 export interface IssueCertificateParams {
-  tokenId: string | bigint; // uint256
-  ipfsHash: string; // CID (IPFS hash)
-  recipientAddress: string; // Address của người nhận
+  tokenId?: string | bigint; // optional token id if caller wants to track
+  ipfsHash: string; // CID (IPFS metadata hash)
+  recipientAddress?: string; // Address của người nhận
 }
 
 export interface CertificateData {
@@ -67,7 +67,7 @@ export class BlockchainService {
     // Khởi tạo contract instance
     this.contract = new ethers.Contract(
       CONTRACT_ADDRESS,
-      CONTRACT_ABI,
+      NFT_CONTRACT_ABI,
       this.provider,
     );
 
@@ -89,7 +89,9 @@ export class BlockchainService {
    * @param params - Thông tin chứng chỉ: tokenId, ipfsHash, recipientAddress
    * @returns Transaction hash
    */
-  async issueCertificate(params: IssueCertificateParams): Promise<string> {
+  async issueCertificate(
+    params: IssueCertificateParams,
+  ): Promise<{ transactionHash: string; tokenId?: string }> {
     try {
       if (!this.signer) {
         throw new Error(
@@ -105,25 +107,40 @@ export class BlockchainService {
         );
       }
 
-      // Validate inputs
-      if (!ethers.isAddress(recipientAddress)) {
+      const targetRecipient =
+        recipientAddress && ethers.isAddress(recipientAddress)
+          ? recipientAddress
+          : DEFAULT_NFT_RECIPIENT;
+
+      if (!ethers.isAddress(targetRecipient)) {
         throw new Error('Invalid recipient address');
       }
 
-      // Convert tokenId to BigNumber nếu là string
-      const tokenIdBigInt =
-        typeof tokenId === 'string' ? BigInt(tokenId) : tokenId;
+      const metadataUri = this.ensureIpfsUri(ipfsHash);
+
+      // Lấy tokenId tiếp theo để logging (nếu contract hỗ trợ)
+      let nextTokenId: bigint | undefined;
+      try {
+        if (typeof this.contract.nextId === 'function') {
+          nextTokenId = await this.contract.nextId();
+        }
+      } catch (readError) {
+        this.logger.warn(
+          `Unable to read next token id before minting: ${
+            readError instanceof Error ? readError.message : 'Unknown error'
+          }`,
+        );
+      }
+
+      const tokenIdForLog =
+        tokenId ?? (nextTokenId ? nextTokenId.toString() : 'unknown');
 
       this.logger.log(
-        `Issuing certificate: tokenId=${tokenIdBigInt.toString()}, recipient=${recipientAddress}, ipfsHash=${ipfsHash}`,
+        `Minting certificate NFT: tokenId=${tokenIdForLog}, recipient=${targetRecipient}, metadata=${metadataUri}`,
       );
 
-      // Gọi function issueCertificate trên smart contract
-      const tx = await this.contract.issueCertificate(
-        tokenIdBigInt,
-        ipfsHash,
-        recipientAddress,
-      );
+      // Gọi function mint trên smart contract
+      const tx = await this.contract.mint(targetRecipient, metadataUri);
 
       this.logger.log(`Transaction sent: ${tx.hash}`);
 
@@ -131,9 +148,11 @@ export class BlockchainService {
       const receipt = await tx.wait();
       this.logger.log(`Transaction confirmed in block: ${receipt.blockNumber}`);
 
-      // Parse event CertificateIssued từ receipt
+      let mintedTokenId: string | undefined;
+
+      // Parse event Transfer từ receipt
       try {
-        const event = receipt.logs
+        const transferEvent = receipt.logs
           .map((log: any) => {
             try {
               return this.contract.interface.parseLog(log);
@@ -141,23 +160,23 @@ export class BlockchainService {
               return null;
             }
           })
-          .find((parsed: any) => parsed?.name === 'CertificateIssued');
+          .find(
+            (parsed: any) =>
+              parsed?.name === 'Transfer' &&
+              parsed?.args?.from === ethers.ZeroAddress,
+          );
 
-        if (event) {
-          // Convert BigInt values to string for logging
-          const eventData: any = {};
-          if (event.args) {
-            for (const key in event.args) {
-              const value = event.args[key];
-              if (typeof value === 'bigint') {
-                eventData[key] = value.toString();
-              } else {
-                eventData[key] = value;
-              }
-            }
-          }
+        if (transferEvent?.args) {
+          mintedTokenId =
+            typeof transferEvent.args.tokenId === 'bigint'
+              ? transferEvent.args.tokenId.toString()
+              : transferEvent.args.tokenId;
           this.logger.log(
-            `Certificate issued event: ${JSON.stringify(eventData)}`,
+            `Certificate NFT minted: tokenId=${mintedTokenId}, recipient=${transferEvent.args.to}`,
+          );
+        } else {
+          this.logger.warn(
+            `Mint transaction ${tx.hash} confirmed but no Transfer event found. Token ID could not be determined.`,
           );
         }
       } catch (eventError: unknown) {
@@ -165,19 +184,32 @@ export class BlockchainService {
         const errorMsg =
           eventError instanceof Error ? eventError.message : 'Unknown error';
         this.logger.warn(
-          `Failed to parse event from transaction ${tx.hash}, but transaction was successful: ${errorMsg}`,
+          `Failed to parse mint event from transaction ${tx.hash}, but transaction was successful: ${errorMsg}`,
         );
       }
 
       // Return transaction hash ngay cả khi parse event fail
-      return tx.hash;
+      return {
+        transactionHash: tx.hash,
+        tokenId: mintedTokenId ?? nextTokenId?.toString() ?? undefined,
+      };
     } catch (error: any) {
       this.logger.error(
-        `Error issuing certificate: ${error.message}`,
+        `Error minting certificate NFT: ${error.message}`,
         error.stack,
       );
-      throw new Error(`Failed to issue certificate: ${error.message}`);
+      throw new Error(`Failed to mint certificate NFT: ${error.message}`);
     }
+  }
+
+  private ensureIpfsUri(ipfsHash: string): string {
+    if (!ipfsHash) {
+      throw new Error('IPFS hash is required');
+    }
+    if (ipfsHash.startsWith('ipfs://') || ipfsHash.startsWith('http')) {
+      return ipfsHash;
+    }
+    return `ipfs://${ipfsHash}`;
   }
 
   /**
@@ -194,14 +226,20 @@ export class BlockchainService {
         `Getting certificate: tokenId=${tokenIdBigInt.toString()}`,
       );
 
-      const certificate = await this.contract.getCertificate(tokenIdBigInt);
+      const [owner, tokenUri, contractOwner] = await Promise.all([
+        this.contract.ownerOf(tokenIdBigInt),
+        this.contract.tokenURI(tokenIdBigInt),
+        typeof this.contract.owner === 'function'
+          ? this.contract.owner()
+          : DEFAULT_NFT_RECIPIENT,
+      ]);
 
       return {
-        cid: certificate.cid,
-        issuer: certificate.issuer,
-        recipient: certificate.recipient,
-        issuedAt: certificate.issuedAt,
-        revoked: certificate.revoked,
+        cid: tokenUri,
+        issuer: contractOwner,
+        recipient: owner,
+        issuedAt: BigInt(0),
+        revoked: false,
       };
     } catch (error: any) {
       this.logger.error(
@@ -228,17 +266,11 @@ export class BlockchainService {
         `Verifying certificate: tokenId=${tokenIdBigInt.toString()}`,
       );
 
-      const result = await this.contract.verifyCertificate(tokenIdBigInt);
+      const certificate = await this.getCertificate(tokenIdBigInt);
 
       return {
-        valid: result.valid,
-        certificate: {
-          cid: result.cert.cid,
-          issuer: result.cert.issuer,
-          recipient: result.cert.recipient,
-          issuedAt: result.cert.issuedAt,
-          revoked: result.cert.revoked,
-        },
+        valid: Boolean(certificate.cid),
+        certificate,
       };
     } catch (error: any) {
       this.logger.error(
@@ -254,31 +286,15 @@ export class BlockchainService {
    * @param ipfsHash - IPFS hash (CID) của chứng chỉ
    * @returns { valid: boolean, certificate: CertificateData }
    */
-  async verifyCertificateByCID(
+  verifyCertificateByCID(
     ipfsHash: string,
   ): Promise<{ valid: boolean; certificate: CertificateData }> {
-    try {
-      this.logger.log(`Verifying certificate by CID: ${ipfsHash}`);
-
-      const result = await this.contract.verifyCertificateByCID(ipfsHash);
-
-      return {
-        valid: result.valid,
-        certificate: {
-          cid: result.cert.cid,
-          issuer: result.cert.issuer,
-          recipient: result.cert.recipient,
-          issuedAt: result.cert.issuedAt,
-          revoked: result.cert.revoked,
-        },
-      };
-    } catch (error: any) {
-      this.logger.error(
-        `Error verifying certificate by CID: ${error.message}`,
-        error.stack,
-      );
-      throw new Error(`Failed to verify certificate by CID: ${error.message}`);
-    }
+    const message =
+      'verifyCertificateByCID is not supported by the current certificate NFT contract.';
+    this.logger.warn(
+      `verifyCertificateByCID is not supported by the current NFT contract. CID=${ipfsHash}`,
+    );
+    return Promise.reject(new Error(message));
   }
 
   /**
@@ -286,20 +302,13 @@ export class BlockchainService {
    * @param ipfsHash - IPFS hash (CID)
    * @returns Token ID
    */
-  async getCertificateIdByCID(ipfsHash: string): Promise<bigint> {
-    try {
-      this.logger.log(`Getting certificate ID by CID: ${ipfsHash}`);
-
-      const tokenId = await this.contract.getCertificateIdByCID(ipfsHash);
-
-      return tokenId;
-    } catch (error: any) {
-      this.logger.error(
-        `Error getting certificate ID by CID: ${error.message}`,
-        error.stack,
-      );
-      throw new Error(`Failed to get certificate ID by CID: ${error.message}`);
-    }
+  getCertificateIdByCID(ipfsHash: string): Promise<bigint> {
+    const message =
+      'getCertificateIdByCID is not supported by the current certificate NFT contract.';
+    this.logger.warn(
+      `getCertificateIdByCID is not supported by the current NFT contract. CID=${ipfsHash}`,
+    );
+    return Promise.reject(new Error(message));
   }
 
   /**
@@ -307,55 +316,13 @@ export class BlockchainService {
    * @param tokenId - Token ID của chứng chỉ cần revoke
    * @returns Transaction hash
    */
-  async revokeCertificate(tokenId: string | bigint): Promise<string> {
-    try {
-      if (!this.signer) {
-        throw new Error(
-          'Signer not initialized. Please set BLOCKCHAIN_PRIVATE_KEY in environment variables.',
-        );
-      }
-
-      const tokenIdBigInt =
-        typeof tokenId === 'string' ? BigInt(tokenId) : tokenId;
-
-      this.logger.log(
-        `Revoking certificate: tokenId=${tokenIdBigInt.toString()}`,
-      );
-
-      // Gọi function revokeCertificate trên smart contract
-      const tx = await this.contract.revokeCertificate(tokenIdBigInt);
-
-      this.logger.log(`Transaction sent: ${tx.hash}`);
-
-      // Đợi transaction được mined
-      const receipt = await tx.wait();
-      this.logger.log(`Transaction confirmed in block: ${receipt.blockNumber}`);
-
-      // Parse event CertificateRevoked từ receipt
-      const event = receipt.logs
-        .map((log: any) => {
-          try {
-            return this.contract.interface.parseLog(log);
-          } catch {
-            return null;
-          }
-        })
-        .find((parsed: any) => parsed?.name === 'CertificateRevoked');
-
-      if (event) {
-        this.logger.log(
-          `Certificate revoked event: ${JSON.stringify(event.args)}`,
-        );
-      }
-
-      return tx.hash;
-    } catch (error: any) {
-      this.logger.error(
-        `Error revoking certificate: ${error.message}`,
-        error.stack,
-      );
-      throw new Error(`Failed to revoke certificate: ${error.message}`);
-    }
+  revokeCertificate(tokenId: string | bigint): Promise<string> {
+    const message =
+      'revokeCertificate is not supported by the current certificate NFT contract.';
+    this.logger.warn(
+      `revokeCertificate is not supported by the current NFT contract. tokenId=${tokenId.toString()}`,
+    );
+    return Promise.reject(new Error(message));
   }
 
   /**

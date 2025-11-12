@@ -17,6 +17,7 @@ import {
 } from 'src/database/schemas/submission.schema';
 import { Exam, ExamDocument } from 'src/database/schemas/exam.schema';
 import { BlockchainService } from '../../common/services/blockchain.service';
+import { DEFAULT_NFT_RECIPIENT } from '../../common/utils/constant';
 import { CertificateGenerationService } from '../../common/services/certificate-generation.service';
 
 @Injectable()
@@ -64,8 +65,6 @@ export class CertificateService {
 
     const student = await this.userModel.findById(dto.studentId);
     if (!student) throw new NotFoundException('Student not found');
-
-    student.walletAddress = '0x80812e3ac51e98cfd368945baf5ab3979706a48c';
 
     const certificate = new this.certificateModel({
       studentId: new Types.ObjectId(dto.studentId),
@@ -127,37 +126,37 @@ export class CertificateService {
         await savedCertificate.save();
       }
 
-      // 3. Kiểm tra wallet address của student
+      // 3. Chuẩn bị địa chỉ ví đích (sử dụng default nếu chưa có)
+      const recipientAddress =
+        student.walletAddress && student.walletAddress.trim().length > 0
+          ? student.walletAddress
+          : DEFAULT_NFT_RECIPIENT;
       if (!student.walletAddress) {
-        const studentIdStr = (student._id as Types.ObjectId).toString();
         this.logger.warn(
-          `Student ${studentIdStr} does not have wallet address. Certificate created but not minted on blockchain.`,
+          `Student ${String(
+            student._id,
+          )} has no wallet address. Using default recipient ${recipientAddress} for NFT minting.`,
         );
-        // Nếu không có wallet address, trả về certificate với status 'pending'
-        // Certificate đã có IPFS hash từ Pinata (nếu upload thành công)
-        return await this.certificateModel
-          .findById(savedCertificate._id)
-          .populate('studentId', 'username email fullName role')
-          .populate('courseId', 'courseName')
-          .populate('submissionId', 'score submittedAt')
-          .lean();
       }
 
       // 4. Mint certificate trên blockchain với IPFS hash từ Pinata
       this.logger.log(
-        `Minting certificate on blockchain: tokenId=${tokenId}, recipient=${student.walletAddress}`,
+        `Minting certificate on blockchain: tokenId=${tokenId}, recipient=${recipientAddress}`,
       );
 
       let transactionHash: string | undefined;
+      let mintedTokenId: string | undefined;
       try {
-        transactionHash = await this.blockchainService.issueCertificate({
+        const mintResult = await this.blockchainService.issueCertificate({
           tokenId: tokenId,
           ipfsHash: metadataIpfsHash ?? '',
-          recipientAddress: student.walletAddress,
+          recipientAddress,
         });
+        transactionHash = mintResult.transactionHash;
+        mintedTokenId = mintResult.tokenId;
 
         // 5. Update certificate với tokenId, ipfsHash (đã có từ Pinata), transactionHash và status
-        savedCertificate.tokenId = tokenId;
+        savedCertificate.tokenId = mintedTokenId ?? tokenId;
         // ipfsHash đã được update từ bước upload Pinata
         if (!savedCertificate.ipfsHash && metadataIpfsHash) {
           savedCertificate.ipfsHash = metadataIpfsHash;
