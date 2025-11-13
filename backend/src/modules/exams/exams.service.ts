@@ -520,6 +520,17 @@ export class ExamsService {
       throw new BadRequestException('This exam has already ended.');
     }
 
+    // validation 3: check if student done exam before
+    const examObjectId = exam._id as Types.ObjectId;
+    const studentObjectId = new Types.ObjectId(studentId);
+    const existingSubmission = await this.submissionModel.findOne({
+      studentId: studentObjectId,
+      examId: examObjectId,
+    });
+    if (existingSubmission) {
+      throw new ForbiddenException('You have already submitted this exam.');
+    }
+
     // // --- Validation 3: Check if student is enrolled in the course ---
     // const enrollment = await this.enrollmentModel.findOne({
     //   studentId: studentId,
@@ -755,6 +766,9 @@ export class ExamsService {
       exam.endTime,
       exam.status,
     );
+
+    console.log(`Found ${submissions.length} submissions for exam ID:`, examId);
+
 
     // Map submissions thành ExamResultDto
     const results: ExamResultDto[] = [];
