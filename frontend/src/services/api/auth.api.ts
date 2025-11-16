@@ -1,5 +1,10 @@
-import { AuthService } from "../index";
-import type { LoginResponse, RegisterResponse } from "../types";
+import { AuthService } from '../index'
+import type {
+  ForgotPasswordResponse,
+  LoginResponse,
+  RegisterResponse,
+  ResetPasswordResponse
+} from '../types'
 
 // ==================== AUTH API ENDPOINTS ====================
 
@@ -13,9 +18,9 @@ import type { LoginResponse, RegisterResponse } from "../types";
  */
 export const useLoginApi = () => {
   return AuthService.usePost<LoginResponse>({
-    url: "/login",
-  });
-};
+    url: '/login'
+  })
+}
 
 /**
  * Register API
@@ -27,9 +32,33 @@ export const useLoginApi = () => {
  */
 export const useRegisterApi = () => {
   return AuthService.usePost<RegisterResponse>({
-    url: "/register",
-  });
-};
+    url: '/register'
+  })
+}
+
+/**
+ * Forgot Password API
+ * POST /auth/forgot-password
+ *
+ * @example
+ * const forgotPasswordMutation = useForgotPasswordApi()
+ * await forgotPasswordMutation.mutateAsync({ data: { email } })
+ */
+export const useForgotPasswordApi = () => {
+  return AuthService.usePost<ForgotPasswordResponse>({
+    url: '/forgot-password'
+  })
+}
+
+/**
+ * Reset Password API
+ * POST /auth/reset-password
+ */
+export const useResetPasswordApi = () => {
+  return AuthService.usePost<ResetPasswordResponse>({
+    url: '/reset-password'
+  })
+}
 
 /**
  * Logout API (optional - nếu backend có endpoint)
@@ -37,18 +66,18 @@ export const useRegisterApi = () => {
  */
 export const useLogoutApi = () => {
   return AuthService.usePost<{ success: boolean }>({
-    url: "/logout",
-  });
-};
+    url: '/logout'
+  })
+}
 
 export interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
+  currentPassword: string
+  newPassword: string
 }
 
 export interface ChangePasswordResponse {
-  success: boolean;
-  message: string;
+  success: boolean
+  message: string
 }
 
 /**
@@ -59,8 +88,8 @@ export const changePassword = async (
   data: ChangePasswordRequest
 ): Promise<ChangePasswordResponse> => {
   const response = await AuthService.apiMethod.post<ChangePasswordResponse>({
-    url: "/change-password",
-    data,
-  });
-  return response;
-};
+    url: '/change-password',
+    data
+  })
+  return response
+}

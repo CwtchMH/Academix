@@ -1,12 +1,13 @@
-import { LoginForm } from '@/components/molecules'
+import { ForgotPasswordForm } from '@/components/molecules'
 import { Link } from '@/components/atoms'
-import { LoginCardProps } from './LoginCard.types'
+import { ForgotPasswordCardProps } from './ForgotPasswordCard.types'
 import Image from 'next/image'
 
-const LoginCard: React.FC<LoginCardProps> = ({
+const ForgotPasswordCard: React.FC<ForgotPasswordCardProps> = ({
   onSubmit,
   loading = false,
   error,
+  successMessage,
   className = ''
 }) => {
   return (
@@ -16,7 +17,6 @@ const LoginCard: React.FC<LoginCardProps> = ({
       ${className}
     `}
     >
-      {/* Header */}
       <div className="text-center mb-8">
         <Image
           src="/academix-logo-white.png"
@@ -25,21 +25,27 @@ const LoginCard: React.FC<LoginCardProps> = ({
           height={64}
           className="mx-auto mb-4"
         />
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Sign in</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          Forgot your password?
+        </h1>
         <p className="text-gray-500 text-sm lg:text-base">
-          Access and explore your Academix portal
+          Enter the email associated with your account and we will send reset
+          instructions.
         </p>
       </div>
 
-      {/* Form */}
-      <LoginForm onSubmit={onSubmit} loading={loading} error={error} />
+      <ForgotPasswordForm
+        onSubmit={onSubmit}
+        loading={loading}
+        error={error}
+        successMessage={successMessage}
+      />
 
-      {/* Footer */}
       <div className="mt-6 text-center">
         <p className="text-gray-600 text-sm lg:text-base">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-medium">
-            Create one
+          Remembered your password?{' '}
+          <Link href="/login" className="font-medium">
+            Return to login
           </Link>
         </p>
       </div>
@@ -47,4 +53,4 @@ const LoginCard: React.FC<LoginCardProps> = ({
   )
 }
 
-export default LoginCard
+export default ForgotPasswordCard

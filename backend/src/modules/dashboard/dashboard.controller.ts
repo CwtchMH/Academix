@@ -36,6 +36,7 @@ export class DashboardController {
           stats: {
             totalStudents: 12450,
             activeExams: 6,
+            certificatesIssued: 125,
           },
           examPerformance: {
             summary: {

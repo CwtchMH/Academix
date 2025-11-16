@@ -42,8 +42,20 @@ export class CertificateImageService {
       // Vẽ footer
       this.drawFooter(ctx, data.issuedDate);
 
-      // Convert canvas thành buffer
-      const buffer = canvas.toBuffer('image/png');
+      // Convert canvas thành buffer (async variant to satisfy lint)
+      const buffer = await new Promise<Buffer>((resolve, reject) => {
+        canvas.toBuffer((err, result) => {
+          if (err || !result) {
+            const rejectionReason =
+              err instanceof Error
+                ? err
+                : new Error('Failed to render certificate image.');
+            reject(rejectionReason);
+            return;
+          }
+          resolve(result);
+        }, 'image/png');
+      });
       this.logger.log('Certificate image generated successfully');
 
       return buffer;

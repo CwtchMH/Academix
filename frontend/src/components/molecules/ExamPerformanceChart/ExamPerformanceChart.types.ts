@@ -1,3 +1,5 @@
+import { type ReactNode } from 'react'
+
 export interface ExamPerformanceRecord {
   examId: string
   examName: string
@@ -17,4 +19,5 @@ export interface ExamPerformanceChartProps {
   summary?: ExamPerformanceSummary
   className?: string
   onExamSelect?: (exam: ExamPerformanceRecord) => void
+  headerActions?: ReactNode
 }

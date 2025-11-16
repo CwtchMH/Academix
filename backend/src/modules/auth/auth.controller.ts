@@ -7,6 +7,7 @@ import {
   UseGuards,
   Get,
   Put,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,12 +22,16 @@ import {
   RefreshTokenDto,
   ChangePasswordDto,
   UpdateProfileDto,
+  VerifyFaceDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from './dto/auth.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { Public } from '../../common/decorators/auth.decorator';
+import { Public, Roles } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { ResponseHelper } from '../../common/dto/response.dto';
 import type { IUser } from '../../common/interfaces';
+import type { Request } from 'express';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -53,6 +58,43 @@ export class AuthController {
   async register(@Body() registerDto: RegisterDto) {
     await this.authService.register(registerDto);
     return ResponseHelper.success(undefined, 'User registered successfully');
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request password reset instructions via email' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reset instructions sent if account exists',
+    schema: {
+      example: {
+        success: true,
+        message:
+          'If an account exists for that email, we sent password reset instructions.',
+        data: {
+          expiresInMinutes: 15,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  async requestPasswordReset(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+    @Req() request: Request,
+  ) {
+    const expires = await this.authService.requestPasswordReset(
+      forgotPasswordDto,
+      {
+        ip: request.ip,
+        userAgent: request.headers['user-agent'],
+      },
+    );
+
+    return ResponseHelper.success(
+      expires,
+      'If an account exists for that email, we sent password reset instructions.',
+    );
   }
 
   @Public()
@@ -103,6 +145,27 @@ export class AuthController {
   async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
     const result = await this.authService.refreshTokens(refreshTokenDto);
     return ResponseHelper.success(result, 'Tokens refreshed successfully');
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm password reset using token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password updated successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'Password updated successfully.',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid payload' })
+  @ApiResponse({ status: 401, description: 'Token invalid or expired' })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    await this.authService.resetPassword(resetPasswordDto);
+    return ResponseHelper.success(undefined, 'Password updated successfully.');
   }
 
   @UseGuards(JwtAuthGuard)
@@ -237,5 +300,23 @@ export class AuthController {
       updateProfileDto,
     );
     return ResponseHelper.success(result, 'Profile updated successfully');
+  }
+
+  // --- ENDPOINT MỚI CHO XÁC THỰC KHUÔN MẶT ---
+  @Post('verify-face')
+  @Roles('student') // Chỉ 'student' mới được gọi
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify student face against profile for exam' })
+  @ApiResponse({ status: 200, description: 'Face verified successfully.' })
+  @ApiResponse({ status: 401, description: 'Face verification failed.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Profile image not found or invalid image data.',
+  })
+  async verifyFace(
+    @CurrentUser() user: IUser, // Lấy user từ payload
+    @Body() verifyFaceDto: VerifyFaceDto,
+  ) {
+    return this.authService.verifyFace(user, verifyFaceDto);
   }
 }

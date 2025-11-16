@@ -13,6 +13,10 @@ import {
   SubmissionSchema,
 } from '../../database/schemas/submission.schema';
 import { User, UserSchema } from '../../database/schemas/user.schema';
+import {
+  Certificate,
+  CertificateSchema,
+} from '../../database/schemas/certificate.schema';
 
 @Module({
   imports: [
@@ -22,6 +26,7 @@ import { User, UserSchema } from '../../database/schemas/user.schema';
       { name: Enrollment.name, schema: EnrollmentSchema },
       { name: Submission.name, schema: SubmissionSchema },
       { name: User.name, schema: UserSchema },
+      { name: Certificate.name, schema: CertificateSchema },
     ]),
   ],
   controllers: [DashboardController],
