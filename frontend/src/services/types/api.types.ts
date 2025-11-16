@@ -25,11 +25,38 @@ export interface JoinExamResponseDto {
  * (Khớp với CompletedExamResponseDto)
  */
 export interface CompletedExamResponse {
-  submissionId: string;
-  examPublicId: string;
-  examTitle: string;
-  courseName: string;
-  score: number;
-  result: 'Passed' | 'Failed';
-  submittedAt: string;
+  submissionId: string
+  examPublicId: string
+  examTitle: string
+  courseName: string
+  score: number
+  result: 'Passed' | 'Failed'
+  submittedAt: string
+}
+
+export interface StudentDashboardExamResult {
+  examPublicId: string
+  examTitle: string
+  courseName: string
+  score: number
+  result: 'Passed' | 'Failed'
+  submittedAt: string
+}
+
+export interface StudentDashboardPerformancePoint {
+  submittedAt: string
+  score: number
+  examTitle: string
+  result: 'Passed' | 'Failed'
+}
+
+export interface StudentDashboardPerformance {
+  points: StudentDashboardPerformancePoint[]
+  averageScore: number
+  passRate: number
+}
+
+export interface StudentDashboardSummary {
+  performance: StudentDashboardPerformance
+  completedExams: StudentDashboardExamResult[]
 }

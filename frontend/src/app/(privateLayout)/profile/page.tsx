@@ -58,7 +58,7 @@ export default function ProfilePage() {
   return (
     <>
       {contextHolder}
-      <div className="bg-gray-50 py-8">
+      <div className="bg-gray-50 py-3">
         <div className="max-w-4xl mx-auto px-4">
           <div className="mb-6 flex justify-between items-center">
             <h1 className="md:text-4xl text-3xl font-bold !mb-0 text-gray-900">
