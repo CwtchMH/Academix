@@ -29,15 +29,11 @@ const LoginForm: React.FC<LoginFormProps> = ({
         rules={[
           {
             required: true,
-            message: 'Vui lòng nhập email hoặc tên đăng nhập'
+            message: 'Please enter your email or username'
           }
         ]}
       >
-        <Input
-          id="identifier"
-          placeholder="Email hoặc Tên đăng nhập"
-          type="text"
-        />
+        <Input id="identifier" placeholder="Email or username" type="text" />
       </Form.Item>
 
       <Form.Item
@@ -45,23 +41,23 @@ const LoginForm: React.FC<LoginFormProps> = ({
         rules={[
           {
             required: true,
-            message: 'Vui lòng nhập mật khẩu'
+            message: 'Please enter your password'
           },
           {
             min: 6,
-            message: 'Mật khẩu phải có ít nhất 6 ký tự'
+            message: 'Password must be at least 6 characters'
           }
         ]}
       >
-        <Input id="password" placeholder="Mật khẩu" type="password" />
+        <Input id="password" placeholder="Password" type="password" />
       </Form.Item>
 
       <div className="flex items-center justify-between mb-2">
         <Form.Item name="rememberMe" valuePropName="checked" className="!mb-0">
-          <Checkbox id="rememberMe" label="Ghi nhớ đăng nhập" />
+          <Checkbox id="rememberMe" label="Remember me" />
         </Form.Item>
         <Link href="/forgot-password" className="text-xs sm:text-base">
-          Quên mật khẩu?
+          Forgot password?
         </Link>
       </div>
 
@@ -79,7 +75,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
           fullWidth
           loading={loading}
         >
-          Đăng nhập
+          Sign in
         </Button>
       </Form.Item>
     </Form>

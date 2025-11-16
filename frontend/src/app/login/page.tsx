@@ -28,7 +28,7 @@ export default function LoginPage() {
       })
 
       if (response.success) {
-        // Lưu tokens
+        // Persist tokens
         saveTokens(response.data.accessToken, response.data.refreshToken)
         setUser(response.data.user)
 
@@ -39,13 +39,13 @@ export default function LoginPage() {
             : '/dashboard/student'
         router.push(dashboardUrl)
       } else {
-        // Backend trả về success: false (rare case)
-        setErrorMessage(response.message || 'Đăng nhập thất bại')
+        // Backend returned success: false (rare case)
+        setErrorMessage(response.message || 'Login failed')
       }
     } catch (err: any) {
       console.error('Login error:', err)
 
-      // Parse error message từ backend
+      // Parse error message from backend
       const errorMsg = parseApiError(err)
       setErrorMessage(errorMsg)
     }

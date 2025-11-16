@@ -9,6 +9,12 @@ export class DashboardStatsDto {
 
   @ApiProperty({ example: 6, description: 'Số bài thi đang diễn ra' })
   activeExams: number;
+
+  @ApiProperty({
+    example: 125,
+    description: 'Tổng số chứng chỉ đã được cấp phát',
+  })
+  certificatesIssued: number;
 }
 
 export class ExamPerformanceSummaryDto {

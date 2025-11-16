@@ -13,6 +13,10 @@ import {
 } from '../../database/schemas/submission.schema';
 import { User, UserDocument } from '../../database/schemas/user.schema';
 import {
+  Certificate,
+  CertificateDocument,
+} from '../../database/schemas/certificate.schema';
+import {
   buildDashboardExamList,
   calculatePassRate,
   resolveDashboardExamStatus,
@@ -55,6 +59,8 @@ export class DashboardService {
     private readonly submissionModel: Model<SubmissionDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectModel(Certificate.name)
+    private readonly certificateModel: Model<CertificateDocument>,
   ) {}
 
   async getTeacherDashboard(
@@ -84,6 +90,8 @@ export class DashboardService {
 
     const courseIds = courses.map((course) => course._id);
 
+    const certificatesIssuedPromise = this.countIssuedCertificates(courseIds);
+
     const exams = await this.examModel
       .find({ courseId: { $in: courseIds } })
       .select({
@@ -99,8 +107,14 @@ export class DashboardService {
       .exec();
 
     if (!exams.length) {
-      const totalStudents = await this.countDistinctStudents(courseIds, []);
-      return this.buildEmptyDashboardResponse(totalStudents);
+      const [totalStudents, certificatesIssued] = await Promise.all([
+        this.countDistinctStudents(courseIds, []),
+        certificatesIssuedPromise,
+      ]);
+      return this.buildEmptyDashboardResponse(
+        totalStudents,
+        certificatesIssued,
+      );
     }
 
     const now = new Date();
@@ -121,10 +135,12 @@ export class DashboardService {
 
     const examIds = normalizedExams.map((exam) => exam._id);
 
-    const [totalStudents, performanceAggregation] = await Promise.all([
-      this.countDistinctStudents(courseIds, examIds),
-      this.aggregateExamPerformance(examIds),
-    ]);
+    const [totalStudents, performanceAggregation, certificatesIssued] =
+      await Promise.all([
+        this.countDistinctStudents(courseIds, examIds),
+        this.aggregateExamPerformance(examIds),
+        certificatesIssuedPromise,
+      ]);
 
     const performanceMap = new Map(
       performanceAggregation.map((row) => [
@@ -178,6 +194,7 @@ export class DashboardService {
       stats: {
         totalStudents,
         activeExams: activeExamCount,
+        certificatesIssued,
       },
       examPerformance: {
         summary: { passRate },
@@ -189,11 +206,13 @@ export class DashboardService {
 
   private buildEmptyDashboardResponse(
     totalStudents = 0,
+    certificatesIssued = 0,
   ): TeacherDashboardResponseDto {
     return {
       stats: {
         totalStudents,
         activeExams: 0,
+        certificatesIssued,
       },
       examPerformance: {
         summary: { passRate: 0 },
@@ -353,5 +372,20 @@ export class DashboardService {
       passCount: row.passCount,
       failCount: row.failCount,
     }));
+  }
+
+  private async countIssuedCertificates(
+    courseIds: Types.ObjectId[],
+  ): Promise<number> {
+    if (!courseIds.length) {
+      return 0;
+    }
+
+    return this.certificateModel
+      .countDocuments({
+        courseId: { $in: courseIds },
+        status: 'issued',
+      })
+      .exec();
   }
 }

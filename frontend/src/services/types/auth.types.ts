@@ -1,5 +1,3 @@
-// ==================== AUTH REQUEST TYPES ====================
-
 export interface LoginRequest {
   identifier: string // Email hoặc username
   password: string
@@ -13,7 +11,15 @@ export interface RegisterRequest {
   role: 'student' | 'teacher'
 }
 
-// ==================== AUTH RESPONSE TYPES ====================
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  password: string
+  confirmPassword: string
+}
 
 export interface User {
   id: string
@@ -36,3 +42,17 @@ export interface AuthResponse {
 
 export type LoginResponse = AuthResponse
 export type RegisterResponse = AuthResponse
+
+export interface ForgotPasswordResponse {
+  success: boolean
+  message: string
+  data?: {
+    resetToken?: string
+    expiresInMinutes?: number
+  }
+}
+
+export interface ResetPasswordResponse {
+  success: boolean
+  message: string
+}

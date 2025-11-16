@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsDateString,
   IsNotEmpty,
+  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -119,7 +120,6 @@ export class UpdateProfileDto {
   imageUrl?: string;
 }
 
-
 export class VerifyFaceDto {
   @ApiProperty({
     description: 'Base64 encoded string of the webcam snapshot (image/jpeg)',
@@ -130,3 +130,38 @@ export class VerifyFaceDto {
   webcamImage: string;
 }
 
+export class ForgotPasswordDto {
+  @ApiProperty({
+    example: 'student@example.com',
+    description: 'Email address associated with the account',
+  })
+  @IsEmail()
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: 'abc123', description: 'Token from reset email' })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @ApiProperty({
+    example: 'NewPassword123',
+    description: 'New password (min 6 chars, uppercase, lowercase, number)',
+  })
+  @IsString()
+  @MinLength(6)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/u, {
+    message:
+      'Password must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number',
+  })
+  password: string;
+
+  @ApiProperty({
+    example: 'NewPassword123',
+    description: 'Confirmation password (must match password)',
+  })
+  @IsString()
+  @MinLength(6)
+  confirmPassword: string;
+}
