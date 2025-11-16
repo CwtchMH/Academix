@@ -17,6 +17,17 @@ import {
   type ExamPerformanceRecord
 } from './ExamPerformanceChart.types'
 
+interface CustomizedAxisTickProps {
+  x?: number
+  y?: number
+  payload?: {
+    value: string | number
+  }
+}
+
+const BAR_MIN_WIDTH = 72
+const CHART_MIN_WIDTH = 640
+
 interface ChartDatum extends ExamPerformanceRecord {
   total: number
   passRate: number
@@ -33,6 +44,7 @@ interface TooltipEntry {
 
 const PASS_COLOR = '#22C55E'
 const FAIL_COLOR = '#F97316'
+const MAX_TICK_LABEL_LENGTH = 14
 
 const formatPercentage = (value: number) => `${Math.round(value)}%`
 
@@ -91,10 +103,13 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
   records,
   summary,
   className,
-  onExamSelect
+  onExamSelect,
+  headerActions
 }) => {
+  const safeRecords = Array.isArray(records) ? records : []
+
   const chartData = useMemo<ChartDatum[]>(() => {
-    return records.map((record) => {
+    return safeRecords.map((record) => {
       const total = record.passCount + record.failCount
       const safeTotal = total || 1
       const passRate = (record.passCount / safeTotal) * 100
@@ -105,7 +120,7 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
         failRate: total ? 100 - passRate : 0
       }
     })
-  }, [records])
+  }, [safeRecords])
 
   const totalStudents = useMemo(() => {
     if (summary?.totalStudents !== undefined) {
@@ -155,8 +170,37 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
   )
 
   const isInteractive = Boolean(onExamSelect)
+  const chartWidth = Math.max(chartData.length * BAR_MIN_WIDTH, CHART_MIN_WIDTH)
 
-  const chartContainerClass = `h-80 w-full select-none ${
+  const renderXAxisTick = useCallback(
+    ({ x = 0, y = 0, payload }: CustomizedAxisTickProps) => {
+      const value = String(payload?.value ?? '')
+      const truncated =
+        value.length > MAX_TICK_LABEL_LENGTH
+          ? `${value.slice(0, MAX_TICK_LABEL_LENGTH - 1)}…`
+          : value
+
+      return (
+        <g transform={`translate(${x},${y})`}>
+          <text
+            x={0}
+            y={0}
+            dy={12}
+            textAnchor="end"
+            fill="#475569"
+            fontSize={12}
+            transform="rotate(-30)"
+          >
+            {truncated}
+          </text>
+          {value !== truncated ? <title>{value}</title> : null}
+        </g>
+      )
+    },
+    []
+  )
+
+  const chartOuterClass = `h-80 w-full overflow-x-auto select-none ${
     isInteractive ? 'cursor-pointer' : ''
   }`.trim()
 
@@ -169,91 +213,100 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
       }`.trim()}
     >
       <div className="space-y-3">
-        <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
             <p className="text-sm text-slate-500">{subtitle}</p>
           </div>
-          <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-            <span>
-              Exams tracked:{' '}
-              <span className="font-medium text-slate-900">
-                {chartData.length}
+          <div className="flex flex-col gap-3 md:items-end">
+            {headerActions ?? (
+              <div className="md:self-end">{headerActions}</div>
+            )}
+            <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+              <span>
+                Exams tracked:{' '}
+                <span className="font-medium text-slate-900">
+                  {chartData.length}
+                </span>
               </span>
-            </span>
-            <span>
-              Total students:{' '}
-              <span className="font-medium text-slate-900">
-                {totalStudents.toLocaleString()}
+              <span>
+                Total students:{' '}
+                <span className="font-medium text-slate-900">
+                  {totalStudents.toLocaleString()}
+                </span>
               </span>
-            </span>
-            <span>
-              Overall pass rate:{' '}
-              <span className="font-medium text-emerald-600">
-                {formatPercentage(aggregatedPassRate)}
+              <span>
+                Overall pass rate:{' '}
+                <span className="font-medium text-emerald-600">
+                  {formatPercentage(aggregatedPassRate)}
+                </span>
               </span>
-            </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className={chartContainerClass}>
-        <ResponsiveContainer>
-          <BarChart
-            data={chartData}
-            margin={{ top: 24, right: 16, left: 0, bottom: 16 }}
-            className={isInteractive ? 'cursor-pointer' : undefined}
-          >
-            <CartesianGrid strokeDasharray="4 4" stroke="#E2E8F0" />
-            <XAxis
-              dataKey="examName"
-              tick={{ fill: '#475569', fontSize: 12 }}
-              interval={0}
-              height={48}
-              tickLine={false}
-            />
-            <YAxis
-              allowDecimals={false}
-              tick={{ fill: '#475569', fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              content={<TooltipContent />}
-              cursor={{ fill: 'rgba(15, 23, 42, 0.06)' }}
-            />
-            <Legend
-              verticalAlign="top"
-              align="right"
-              iconType="circle"
-              wrapperStyle={{ paddingBottom: 12 }}
-            />
-            <Bar
-              dataKey="passCount"
-              name="Pass"
-              fill={PASS_COLOR}
-              stackId="performance"
-              radius={[0, 0, 0, 0]}
-              maxBarSize={48}
-              onClick={(data) =>
-                handleDataPointClick(data?.payload as ChartDatum)
-              }
-              className={barClassName}
-            />
-            <Bar
-              dataKey="failCount"
-              name="Fail"
-              fill={FAIL_COLOR}
-              stackId="performance"
-              radius={[6, 6, 0, 0]}
-              maxBarSize={48}
-              onClick={(data) =>
-                handleDataPointClick(data?.payload as ChartDatum)
-              }
-              className={barClassName}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className={chartOuterClass}>
+        <div className="h-full min-w-full" style={{ width: chartWidth }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 24, right: 16, left: 0, bottom: 16 }}
+              className={isInteractive ? 'cursor-pointer' : undefined}
+            >
+              <CartesianGrid strokeDasharray="4 4" stroke="#E2E8F0" />
+              <XAxis
+                dataKey="examName"
+                interval={0}
+                height={64}
+                tickLine={false}
+                tickMargin={16}
+                allowDuplicatedCategory={false}
+                tick={renderXAxisTick}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fill: '#475569', fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                content={<TooltipContent />}
+                cursor={{ fill: 'rgba(15, 23, 42, 0.06)' }}
+              />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                iconType="circle"
+                wrapperStyle={{ paddingBottom: 12 }}
+              />
+              <Bar
+                dataKey="passCount"
+                name="Pass"
+                fill={PASS_COLOR}
+                stackId="performance"
+                radius={[0, 0, 0, 0]}
+                maxBarSize={48}
+                onClick={(data) =>
+                  handleDataPointClick(data?.payload as ChartDatum)
+                }
+                className={barClassName}
+              />
+              <Bar
+                dataKey="failCount"
+                name="Fail"
+                fill={FAIL_COLOR}
+                stackId="performance"
+                radius={[6, 6, 0, 0]}
+                maxBarSize={48}
+                onClick={(data) =>
+                  handleDataPointClick(data?.payload as ChartDatum)
+                }
+                className={barClassName}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

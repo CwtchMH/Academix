@@ -1,6 +1,8 @@
 export { FormField } from './FormField'
 export { LoginForm } from './LoginForm'
 export { RegisterForm } from './RegisterForm'
+export { ForgotPasswordForm } from './ForgotPasswordForm'
+export { ResetPasswordForm } from './ResetPasswordForm'
 export { Navbar } from './Navbar'
 export { Sidebar } from './Sidebar'
 export { UserDropdown } from './UserDropdown'
@@ -14,6 +16,14 @@ export { ExamPerformanceChart } from './ExamPerformanceChart'
 export type { FormFieldProps } from './FormField'
 export type { LoginFormProps, LoginFormData } from './LoginForm'
 export type { RegisterFormProps, RegisterFormData } from './RegisterForm'
+export type {
+  ForgotPasswordFormProps,
+  ForgotPasswordFormValues
+} from './ForgotPasswordForm'
+export type {
+  ResetPasswordFormProps,
+  ResetPasswordFormValues
+} from './ResetPasswordForm'
 export type { NavbarProps } from './Navbar'
 export type { SidebarProps } from './Sidebar'
 export type { UserDropdownProps } from './UserDropdown'

@@ -1,43 +1,24 @@
 'use client'
 
-import { useMemo, useCallback } from 'react'
-import { Icon } from '@/components/atoms'
+import { useMemo, useCallback, useState, useEffect } from 'react'
+import { Button, Icon } from '@/components/atoms'
 import {
   ExamPerformanceChart,
   type ExamPerformanceRecord,
   type ExamPerformanceSummary,
   StatCard
 } from '@/components/molecules'
-import { useTeacherDashboard } from '@/services/api/dashboard.api'
+import {
+  useTeacherDashboard,
+  type TeacherDashboardData
+} from '@/services/api/dashboard.api'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/stores/auth'
 
 type ExamStatus = 'active' | 'scheduled' | 'completed'
 
 const numberFormatter = new Intl.NumberFormat()
-
-const PLACEHOLDER_EXAM_PERFORMANCE_RECORDS: ExamPerformanceRecord[] = [
-  {
-    examId: 'placeholder-1',
-    examName: 'Midterm A',
-    passCount: 48,
-    failCount: 12
-  },
-  {
-    examId: 'placeholder-2',
-    examName: 'Final A',
-    passCount: 54,
-    failCount: 18
-  },
-  {
-    examId: 'placeholder-3',
-    examName: 'Quiz Series',
-    passCount: 32,
-    failCount: 8
-  }
-]
-
-const CERTIFICATES_PLACEHOLDER = 8921
+const MAX_VISIBLE_EXAMS = 10
 
 const normalizeStatus = (status: string): ExamStatus => {
   const normalized = status?.toLowerCase() as ExamStatus
@@ -63,33 +44,76 @@ export default function TeacherDashboardPage() {
   const statsData = dashboardData?.stats
   const activeExams = dashboardData?.activeExams ?? []
   const examPerformanceData = dashboardData?.examPerformance
-  const totalStudents = statsData?.totalStudents ?? 0
-  const certificatesIssued =
-    statsData?.certificatesIssued ?? CERTIFICATES_PLACEHOLDER
+  const totalStudents =
+    statsData?.totalStudents ?? examPerformanceData?.summary?.totalStudents ?? 0
+  const certificatesIssued = statsData?.certificatesIssued
 
-  const hasInteractiveExamData = Boolean(
-    (examPerformanceData?.records?.length ?? 0) > 0
-  )
+  const [showAllExams, setShowAllExams] = useState(false)
 
-  const examPerformanceRecords = useMemo<ExamPerformanceRecord[]>(() => {
-    const apiRecords = examPerformanceData?.records ?? []
-
-    if (!apiRecords.length) {
-      return PLACEHOLDER_EXAM_PERFORMANCE_RECORDS
-    }
-
-    return apiRecords
-      .slice(0, 10)
-      .map(({ examId, examName, passCount, failCount }) => ({
+  const normalizedExamRecords = useMemo<ExamPerformanceRecord[]>(() => {
+    return (examPerformanceData?.records ?? []).map(
+      ({ examId, examName, passCount, failCount }) => ({
         examId,
         examName,
         passCount,
         failCount
-      }))
+      })
+    )
   }, [examPerformanceData?.records])
 
+  const aggregatedExamRecords = useMemo<ExamPerformanceRecord[]>(() => {
+    const order: ExamPerformanceRecord[] = []
+    const totals = new Map<string, ExamPerformanceRecord>()
+
+    normalizedExamRecords.forEach((record) => {
+      const key = record.examId || record.examName
+      if (!key) {
+        order.push({ ...record })
+        return
+      }
+
+      if (!totals.has(key)) {
+        const cloned = { ...record }
+        totals.set(key, cloned)
+        order.push(cloned)
+        return
+      }
+
+      const existing = totals.get(key)
+      if (existing) {
+        existing.passCount += record.passCount
+        existing.failCount += record.failCount
+      }
+    })
+
+    return order
+  }, [normalizedExamRecords])
+
+  const totalExamCount = aggregatedExamRecords.length
+  const hasInteractiveExamData = totalExamCount > 0
+
+  useEffect(() => {
+    if (totalExamCount <= MAX_VISIBLE_EXAMS && showAllExams) {
+      setShowAllExams(false)
+    }
+  }, [showAllExams, totalExamCount])
+
+  const examPerformanceRecords = useMemo<ExamPerformanceRecord[]>(() => {
+    if (!totalExamCount) {
+      return []
+    }
+
+    if (showAllExams) {
+      return aggregatedExamRecords
+    }
+
+    return aggregatedExamRecords.slice(0, MAX_VISIBLE_EXAMS)
+  }, [aggregatedExamRecords, showAllExams, totalExamCount])
+
   const examPerformanceSummary = useMemo<ExamPerformanceSummary>(() => {
-    const aggregated = examPerformanceRecords.reduce(
+    const aggregationSource = totalExamCount ? aggregatedExamRecords : []
+
+    const aggregated = aggregationSource.reduce(
       (acc, record) => {
         const total = record.passCount + record.failCount
         return {
@@ -114,7 +138,7 @@ export default function TeacherDashboardPage() {
       totalStudents: summaryTotalStudents,
       passRate: summaryPassRate
     }
-  }, [examPerformanceData?.summary, examPerformanceRecords])
+  }, [examPerformanceData?.summary, aggregatedExamRecords, totalExamCount])
 
   const activeExamsCount = useMemo(() => {
     if (typeof statsData?.activeExams === 'number') {
@@ -144,7 +168,7 @@ export default function TeacherDashboardPage() {
       },
       {
         title: 'Certificates Issued',
-        value: numberFormatter.format(certificatesIssued),
+        value: numberFormatter.format(certificatesIssued ?? 0),
         description: 'Issued in the last 12 months',
         accentColorClass: 'bg-emerald-50 text-emerald-600',
         icon: (
@@ -154,6 +178,12 @@ export default function TeacherDashboardPage() {
     ],
     [activeExamsCount, certificatesIssued, totalStudents]
   )
+
+  const shouldShowExamToggle = totalExamCount > MAX_VISIBLE_EXAMS
+
+  const handleToggleVisibleExams = useCallback(() => {
+    setShowAllExams((prev) => !prev)
+  }, [])
 
   const handleExamSelect = useCallback(
     (exam: ExamPerformanceRecord) => {
@@ -182,6 +212,19 @@ export default function TeacherDashboardPage() {
         <ExamPerformanceChart
           records={examPerformanceRecords}
           summary={examPerformanceSummary}
+          headerActions={
+            shouldShowExamToggle ? (
+              <Button
+                variant="outline"
+                size="small"
+                onClick={handleToggleVisibleExams}
+              >
+                {showAllExams
+                  ? 'Show latest 10 exams'
+                  : `View all ${totalExamCount} exams`}
+              </Button>
+            ) : null
+          }
           onExamSelect={hasInteractiveExamData ? handleExamSelect : undefined}
         />
       </section>

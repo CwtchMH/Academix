@@ -61,9 +61,29 @@ export default function ProfilePage() {
       <div className="bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="mb-6 flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="md:text-4xl text-3xl font-bold !mb-0 text-gray-900">
               Student Profile
             </h1>
+            <div className="flex gap-2">
+              <Button
+                block
+                size="middle"
+                icon={<UserOutlined />}
+                onClick={() => setIsOpenEditProfileModal(true)}
+                className="flex items-center justify-center gap-2"
+              >
+                Edit Personal Information
+              </Button>
+              <Button
+                block
+                size="middle"
+                icon={<IdcardOutlined />}
+                onClick={() => setIsOpenChangePasswordModal(true)}
+                className="flex items-center justify-center gap-2"
+              >
+                Change Password
+              </Button>
+            </div>
           </div>
 
           <Card
@@ -171,29 +191,6 @@ export default function ProfilePage() {
                 </Tag>
               </Descriptions.Item>
             </Descriptions>
-          </Card>
-
-          <Card className="!mt-6 shadow-md" title="Quick Actions">
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
-              <Button
-                block
-                size="large"
-                icon={<UserOutlined />}
-                onClick={() => setIsOpenEditProfileModal(true)}
-                className="flex items-center justify-center gap-2"
-              >
-                Edit Personal Information
-              </Button>
-              <Button
-                block
-                size="large"
-                icon={<IdcardOutlined />}
-                onClick={() => setIsOpenChangePasswordModal(true)}
-                className="flex items-center justify-center gap-2"
-              >
-                Change Password
-              </Button>
-            </Space>
           </Card>
         </div>
 

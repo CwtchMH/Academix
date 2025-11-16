@@ -26,10 +26,10 @@ const RegisterCard: React.FC<RegisterCardProps> = ({
           className="mx-auto mb-4"
         />
         <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          Tạo tài khoản của bạn
+          Create your account
         </h1>
         <p className="text-gray-500 sm:text-base text-sm">
-          Tham gia và khám phá cổng thông tin của chính mình.
+          Join Academix and start exploring your personalized portal.
         </p>
       </div>
 
@@ -39,9 +39,9 @@ const RegisterCard: React.FC<RegisterCardProps> = ({
       {/* Footer */}
       <div className="mt-6 text-center">
         <p className="text-gray-600 text-sm lg:text-base">
-          Đã có tài khoản?{' '}
+          Already have an account?{' '}
           <Link href="/login" className="font-medium">
-            Đăng nhập
+            Sign in
           </Link>
         </p>
       </div>

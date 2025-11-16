@@ -31,13 +31,13 @@ export default function RegisterPage() {
       if (response.success) {
         router.push('/login')
       } else {
-        // Backend trả về success: false (rare case)
-        setErrorMessage(response.message || 'Đăng ký thất bại')
+        // Backend returned success: false (rare case)
+        setErrorMessage(response.message || 'Registration failed')
       }
     } catch (err: any) {
       console.error('Register error:', err)
 
-      // Parse error message từ backend
+      // Parse error message from backend
       const errorMsg = parseApiError(err)
       setErrorMessage(errorMsg)
     }
