@@ -141,18 +141,6 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
     return (passTotal / safeTotal) * 100
   }, [chartData, summary?.passRate, totalStudents])
 
-  if (!chartData.length) {
-    return (
-      <div
-        className={`rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500 shadow-sm ${
-          className ?? ''
-        }`.trim()}
-      >
-        No exam performance data available yet.
-      </div>
-    )
-  }
-
   const handleDataPointClick = useCallback(
     (payload?: ChartDatum) => {
       if (!payload || !onExamSelect) {
@@ -199,6 +187,18 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
     },
     []
   )
+
+  if (!chartData.length) {
+    return (
+      <div
+        className={`rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500 shadow-sm ${
+          className ?? ''
+        }`.trim()}
+      >
+        No exam performance data available yet.
+      </div>
+    )
+  }
 
   const chartOuterClass = `h-80 w-full overflow-x-auto select-none ${
     isInteractive ? 'cursor-pointer' : ''

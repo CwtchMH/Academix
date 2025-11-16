@@ -1,5 +1,6 @@
 import { type UseQueryOptions } from '@tanstack/react-query'
 import { DashboardService } from '../index'
+import type { StudentDashboardSummary } from '../types'
 
 export interface TeacherDashboardStats {
   totalStudents: number
@@ -47,6 +48,15 @@ export interface TeacherDashboardResponse {
   }
 }
 
+export interface StudentDashboardResponse {
+  success: boolean
+  data: StudentDashboardSummary
+  message: string
+  meta?: {
+    timestamp: string
+  }
+}
+
 type UseTeacherDashboardOptions = Omit<
   UseQueryOptions<TeacherDashboardResponse>,
   'queryKey' | 'queryFn'
@@ -65,5 +75,17 @@ export const useTeacherDashboard = (
     url: '/teacher',
     params: teacherId ? { teacherId } : undefined,
     options: mergedOptions
+  })
+}
+
+type UseStudentDashboardOptions = Omit<
+  UseQueryOptions<StudentDashboardResponse>,
+  'queryKey' | 'queryFn'
+>
+
+export const useStudentDashboard = (options?: UseStudentDashboardOptions) => {
+  return DashboardService.useGet<StudentDashboardResponse>({
+    url: '/student',
+    options
   })
 }

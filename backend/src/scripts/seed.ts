@@ -50,6 +50,7 @@ async function bootstrap() {
 
     const users = await userModel.insertMany([
       {
+        username: 'admin',
         email: 'admin@edu-chain.com',
         passwordHash: hashedPassword,
         fullName: 'System Administrator',
@@ -58,6 +59,7 @@ async function bootstrap() {
         walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
       },
       {
+        username: 'teacher.alice',
         email: 'teacher1@edu-chain.com',
         passwordHash: hashedPassword,
         fullName: 'Dr. Alice Johnson',
@@ -66,6 +68,7 @@ async function bootstrap() {
         walletAddress: '0x2345678901abcdef2345678901abcdef23456789',
       },
       {
+        username: 'teacher.bob',
         email: 'teacher2@edu-chain.com',
         passwordHash: hashedPassword,
         fullName: 'Prof. Bob Smith',
@@ -74,6 +77,7 @@ async function bootstrap() {
         walletAddress: '0x3456789012abcdef3456789012abcdef34567890',
       },
       {
+        username: 'student.john',
         email: 'student1@edu-chain.com',
         passwordHash: hashedPassword,
         fullName: 'John Doe',
@@ -82,6 +86,7 @@ async function bootstrap() {
         walletAddress: '0x4567890123abcdef4567890123abcdef45678901',
       },
       {
+        username: 'student.jane',
         email: 'student2@edu-chain.com',
         passwordHash: hashedPassword,
         fullName: 'Jane Smith',
@@ -90,6 +95,7 @@ async function bootstrap() {
         walletAddress: '0x5678901234abcdef5678901234abcdef56789012',
       },
       {
+        username: 'student.michael',
         email: 'student3@edu-chain.com',
         passwordHash: hashedPassword,
         fullName: 'Michael Brown',
