@@ -28,6 +28,9 @@ export class Certificate {
   ipfsHash?: string; // IPFS hash for certificate metadata
 
   @Prop()
+  ipfsImage?: string; // IPFS hash for certificate image
+
+  @Prop()
   transactionHash?: string; // Blockchain transaction hash
 
   @Prop({ type: Date })

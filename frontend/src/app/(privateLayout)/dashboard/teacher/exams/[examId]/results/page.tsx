@@ -2,7 +2,18 @@
 
 import React, { useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Card, Table, Empty, Typography, Space, Row, Col, Modal } from "antd";
+import {
+  Card,
+  Table,
+  Empty,
+  Typography,
+  Space,
+  Row,
+  Col,
+  Modal,
+  Spin,
+} from "antd";
+import { CheckCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import "./styles.css";
 import type { ColumnsType } from "antd/es/table";
 import { Icon, Input, Select, Button, Badge } from "@/components/atoms";
@@ -52,6 +63,8 @@ const ResultsPage: React.FC = () => {
   const [minGrade, setMinGrade] = useState("");
   const [maxGrade, setMaxGrade] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ExamResultEntity | null>(
     null
   );
@@ -435,15 +448,23 @@ const ResultsPage: React.FC = () => {
         onOk={async () => {
           if (!selectedRecord) return;
 
+          // Close confirm modal and open processing modal
+          setIsModalOpen(false);
+          setIsProcessingModalOpen(true);
+
           try {
             await issueCertificate({
               examId: examId,
               studentId: selectedRecord.studentId,
             });
-            setIsModalOpen(false);
-            setSelectedRecord(null);
+            // Close processing modal and open success modal
+            setIsProcessingModalOpen(false);
+            setIsSuccessModalOpen(true);
           } catch (error) {
             console.error("Failed to issue certificate:", error);
+            // Close processing modal and reopen confirm modal with error
+            setIsProcessingModalOpen(false);
+            setIsModalOpen(true);
           }
         }}
         okText="Yes, Create Certificate"
@@ -478,6 +499,70 @@ const ResultsPage: React.FC = () => {
               {certificateError instanceof Error && (
                 <div className="mt-1 text-xs">{certificateError.message}</div>
               )}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Processing Modal */}
+      <Modal
+        open={isProcessingModalOpen}
+        footer={null}
+        closable={false}
+        maskClosable={false}
+        centered
+        width={400}
+      >
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <Spin
+            indicator={
+              <LoadingOutlined
+                style={{ fontSize: 48, color: "#3b82f6" }}
+                spin
+              />
+            }
+          />
+          <Title level={4} className="!m-0 text-center">
+            Processing Certificate
+          </Title>
+          <Text className="text-center text-slate-500">
+            Please wait while we create the certificate for{" "}
+            <Text strong>{selectedRecord?.studentName}</Text>...
+          </Text>
+        </div>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        open={isSuccessModalOpen}
+        onCancel={() => {
+          setIsSuccessModalOpen(false);
+          setSelectedRecord(null);
+        }}
+        onOk={() => {
+          setIsSuccessModalOpen(false);
+          setSelectedRecord(null);
+        }}
+        okText="Close"
+        cancelButtonProps={{ style: { display: "none" } }}
+        centered
+        width={400}
+        maskClosable={false}
+      >
+        <div className="flex flex-col items-center justify-center py-4 space-y-4">
+          <CheckCircleOutlined style={{ fontSize: 64, color: "#10b981" }} />
+          <Title level={4} className="!m-0 text-center">
+            Certificate Issued Successfully!
+          </Title>
+          <Text className="text-center text-slate-600">
+            The certificate has been successfully created for{" "}
+            <Text strong>{selectedRecord?.studentName}</Text>.
+          </Text>
+          {selectedRecord && (
+            <div className="mt-2 text-sm text-slate-500 text-center">
+              <Text>Student Code: {selectedRecord.studentCode}</Text>
+              <br />
+              <Text>Grade: {getGradeDisplay(selectedRecord)}</Text>
             </div>
           )}
         </div>
