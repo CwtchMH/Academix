@@ -106,8 +106,9 @@ export class CertificateService {
           `Certificate assets uploaded to Pinata. Image IPFS: ${imageIpfsHash}, Metadata IPFS: ${metadataIpfsHash}`,
         );
 
-        // Update certificate với metadata IPFS hash từ Pinata
+        // Update certificate với metadata và image IPFS hash từ Pinata
         savedCertificate.ipfsHash = metadataIpfsHash;
+        savedCertificate.set('ipfsImage', imageIpfsHash);
         await savedCertificate.save();
       } catch (pinataError: unknown) {
         const errorMessage =
@@ -119,10 +120,12 @@ export class CertificateService {
         // Tiếp tục với placeholder nếu upload Pinata fail
         const placeholderHash = `QmPlaceholder${tokenId.substring(0, 10)}`;
         metadataIpfsHash = placeholderHash;
+        imageIpfsHash = placeholderHash;
         this.logger.warn(
           `Using placeholder IPFS hash due to Pinata upload failure`,
         );
         savedCertificate.ipfsHash = metadataIpfsHash;
+        savedCertificate.set('ipfsImage', imageIpfsHash);
         await savedCertificate.save();
       }
 
@@ -155,11 +158,14 @@ export class CertificateService {
         transactionHash = mintResult.transactionHash;
         mintedTokenId = mintResult.tokenId;
 
-        // 5. Update certificate với tokenId, ipfsHash (đã có từ Pinata), transactionHash và status
+        // 5. Update certificate với tokenId, ipfsHash và ipfsImage (đã có từ Pinata), transactionHash và status
         savedCertificate.tokenId = mintedTokenId ?? tokenId;
-        // ipfsHash đã được update từ bước upload Pinata
+        // ipfsHash và ipfsImage đã được update từ bước upload Pinata
         if (!savedCertificate.ipfsHash && metadataIpfsHash) {
           savedCertificate.ipfsHash = metadataIpfsHash;
+        }
+        if (!savedCertificate.get('ipfsImage') && imageIpfsHash) {
+          savedCertificate.set('ipfsImage', imageIpfsHash);
         }
         savedCertificate.transactionHash = transactionHash;
         savedCertificate.status = 'issued';
@@ -298,6 +304,8 @@ export class CertificateService {
         submission: item.submissionId || {},
         tokenId: item.tokenId || '',
         ipfsHash: item.ipfsHash || '',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        ipfsImage: (item as any).ipfsImage || '',
         transactionHash: item.transactionHash || '',
         issuedAt: item.issuedAt || '',
         outdateTime: item.outdateTime || '',
