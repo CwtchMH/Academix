@@ -25,6 +25,7 @@ import {
   VerifyFaceDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  ValidateImageDto,
 } from './dto/auth.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public, Roles } from '../../common/decorators/auth.decorator';
@@ -319,4 +320,16 @@ export class AuthController {
   ) {
     return this.authService.verifyFace(user, verifyFaceDto);
   }
+
+  @Post('validate-profile-image')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validate profile image using AI' })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Image is valid.' })
+  @ApiResponse({ status: 400, description: 'Image is invalid (e.g., blurry, not a face).' })
+  async validateProfileImage(@Body() validateImageDto: ValidateImageDto) {
+    return this.authService.validateProfileImage(validateImageDto.imageBase64);
+  }
+
 }

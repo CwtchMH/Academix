@@ -165,3 +165,16 @@ export class ResetPasswordDto {
   @MinLength(6)
   confirmPassword: string;
 }
+
+/**
+ * DTO cho API xác thực ảnh profile
+ */
+export class ValidateImageDto {
+  @ApiProperty({
+    description: 'Base64 encoded string of the image (image/jpeg or image/png)',
+    example: 'data:image/jpeg;base64,/9j/4AAQSk...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  imageBase64: string;
+}

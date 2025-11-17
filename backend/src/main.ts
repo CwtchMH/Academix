@@ -7,10 +7,12 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { GlobalValidationPipe } from './common/pipes/validation.pipe';
 import { ResponseHelper } from './common/dto/response.dto';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
 
   // Security middleware
   app.use(helmet());
@@ -20,6 +22,11 @@ async function bootstrap() {
     ],
     credentials: true,
   });
+
+  // Increase the limit for JSON (your base64 images)
+  app.use(json({ limit: '10mb' }));
+  // Increase limit for URL-encoded
+  app.use(urlencoded({ extended: true, limit: '10mb' }));
 
   // Global prefix
   const apiPrefix = configService.get<string>('app.apiPrefix') || 'api/v1';

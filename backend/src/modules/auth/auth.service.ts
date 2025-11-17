@@ -52,6 +52,11 @@ interface GeminiResponse {
   }>;
 }
 
+interface ImageValidationResult {
+  isValid: boolean;
+  reason: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -660,6 +665,100 @@ export class AuthService {
       throw new InternalServerErrorException(
         'Face verification service failed.',
       );
+    }
+  }
+
+  /**
+   * Use Gemini to check the quality of the profile image
+   * @param imageBase64 Image (including data:image/jpeg;base64,)
+   * @returns
+   */
+  async validateProfileImage(imageBase64: string) {
+    this.logger.log('Validating new profile image...');
+
+    // Tách mime type và data
+    const parts = imageBase64.match(/^data:(image\/(?:jpeg|png));base64,(.*)$/);
+    if (!parts || parts.length !== 3) {
+      throw new BadRequestException('Invalid image format. Must be data URL (jpeg/png).');
+    }
+    
+    const mimeType = parts[1]; // "image/jpeg"
+    const base64Data = parts[2]; // "..."
+
+    // call Gemini API
+    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+    if (!apiKey) {
+      this.logger.error('GEMINI_API_KEY is not set.');
+      throw new InternalServerErrorException('AI service is not configured.');
+    }
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+    const systemPrompt =
+      "You are an AI passport photo checker. Analyze *the user's image. Determine if it is a valid profile picture for a secure exam system. Check for: 1. Only one clear human face. 2. Face is centered. 3. Face is looking forward. 4. No obstructions (sunglasses, masks). 5. Image is clear (not blurry).";
+    
+    // Ask Gemini to return JSON
+    const jsonSchema = {
+      type: 'OBJECT',
+      properties: {
+        isValid: { type: 'BOOLEAN' },
+        reason: { type: 'STRING' },
+      },
+      required: ['isValid', 'reason'],
+    };
+
+    const payload = {
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: 'Analyze this image and return JSON.' },
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: base64Data,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: jsonSchema,
+      },
+    };
+
+    try {
+      const geminiResponse = await firstValueFrom(
+        this.httpService.post(apiUrl, payload, {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      // Parse text JSON từ Gemini
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const jsonText = geminiResponse.data.candidates[0].content.parts[0].text;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument
+      const result: ImageValidationResult = JSON.parse(jsonText);
+
+      this.logger.log(`Image validation result: ${JSON.stringify(result)}`);
+
+      // --- Xử lý kết quả ---
+      if (result.isValid) {
+        return {
+          success: true,
+          message: 'Image is valid.',
+        };
+      } else {
+        // Throw 400 error with reason from AI
+        throw new BadRequestException(result.reason || 'Image is not valid.');
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error; // Ném lại lỗi 400
+      this.logger.error('Gemini API call failed', error.response?.data || error.message);
+      throw new InternalServerErrorException('AI validation service failed.');
     }
   }
 }
