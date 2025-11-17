@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
+import { StudentDashboardController } from './student/student-dashboard.controller';
+import { StudentDashboardService } from './student/student-dashboard.service';
 import { Course, CourseSchema } from '../../database/schemas/course.schema';
 import { Exam, ExamSchema } from '../../database/schemas/exam.schema';
 import {
@@ -29,7 +31,7 @@ import {
       { name: Certificate.name, schema: CertificateSchema },
     ]),
   ],
-  controllers: [DashboardController],
-  providers: [DashboardService],
+  controllers: [DashboardController, StudentDashboardController],
+  providers: [DashboardService, StudentDashboardService],
 })
 export class DashboardModule {}
