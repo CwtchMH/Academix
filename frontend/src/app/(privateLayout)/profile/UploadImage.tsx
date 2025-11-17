@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Modal, Button, message, Image } from 'antd'
 import type { UploadFile, UploadProps } from 'antd'
 import { ImageUploadArea } from '@/components/molecules'
-import { updateProfile } from '@/services'
+import { updateProfile, validateProfileImage } from '@/services'
 import { useAuth } from '@/stores/auth'
 import './upload-image.css'
 
@@ -12,6 +12,14 @@ interface UploadImageProps {
   onUploadSuccess?: (imageUrl: string) => void
   currentImageUrl?: string
 }
+
+const getBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
 
 const UploadImage = ({
   isOpen,
@@ -24,6 +32,7 @@ const UploadImage = ({
   const [previewImage, setPreviewImage] = useState<string>('')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [messageApi, contextHolder] = message.useMessage();
 
   // Handlers
   const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
@@ -89,7 +98,23 @@ const UploadImage = ({
 
     // Upload to Cloudinary
     setUploading(true)
+    let base64Image = '';
     try {
+      // Convert sang Base64 ---
+      base64Image = await getBase64(file.originFileObj as File);
+
+      // Call AI Validation ---
+      messageApi.open({
+        key: 'ai-validate',
+        type: 'loading',
+        content: 'AI is validating your image...',
+      });
+      await validateProfileImage(base64Image); // Send base64 (including data:...)
+      messageApi.success({
+        key: 'ai-validate',
+        content: 'Image is valid! Uploading...',
+      });
+      // (If AI succeeds) Upload to Cloudinary
       const formData = new FormData()
       formData.append('file', file.originFileObj)
       formData.append('upload_preset', 'my_images')
@@ -102,13 +127,25 @@ const UploadImage = ({
         }
       )
 
-      const data = await response.json()
+      const data = await response.json();
       if (data?.secure_url) {
-        await handleUpdateImageProfile(data.secure_url)
+        // (If Cloudinary succeeds) Update profile
+        await handleUpdateImageProfile(data.secure_url);
+        // (handleUpdateImageProfile already has message.success and onClose)
+      } else {
+        throw new Error('Cloudinary upload failed.');
       }
-    } catch (error) {
-      console.error('Upload error:', error)
-      message.error('Upload failed. Please try again.')
+    } catch (error: any) {
+      // Handle errors (from AI or Cloudinary)
+      console.error('Upload error:', error);
+      messageApi.destroy('ai-validate'); // Close loading message
+      
+      // Display error from AI (400 Bad Request)
+      if (error.response?.data?.message) {
+        messageApi.error(error.response.data.message);
+      } else {
+        messageApi.error('Upload failed. Please try again.');
+      }
     } finally {
       setUploading(false)
     }
@@ -146,6 +183,7 @@ const UploadImage = ({
 
   return (
     <>
+    {contextHolder}
       <Modal
         title={
           <div className="flex items-center gap-2">
@@ -205,14 +243,5 @@ const UploadImage = ({
     </>
   )
 }
-
-// Helper function
-const getBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = (error) => reject(error)
-  })
 
 export default UploadImage

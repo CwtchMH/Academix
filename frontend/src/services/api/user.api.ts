@@ -58,3 +58,20 @@ export const updateProfile = async (
   });
   return response;
 };
+
+/**
+ * Validate profile image
+ * POST /auth/validate-profile-image
+ */
+export const validateProfileImage = async (
+  imageBase64: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await AuthService.apiMethod.post<{
+    success: boolean;
+    message: string;
+  }>({
+    url: "/validate-profile-image",
+    data: { imageBase64 },
+  });
+  return response;
+};
