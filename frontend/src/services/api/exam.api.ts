@@ -62,6 +62,7 @@ export interface ExamSummaryEntity {
 }
 
 export interface ExamResultEntity {
+  submissionId: string
   studentId: string
   studentName: string
   studentCode: string
@@ -190,5 +191,98 @@ export const useExamResults = (
   return ExamService.useGet<ExamResultsResponse>({
     url: `/${examId}/results`,
     options
+  })
+}
+
+export interface ExamResultChoiceEntity {
+  option: number
+  content: string
+  isCorrect: boolean
+}
+
+export interface ExamResultQuestionEntity {
+  questionId: string
+  content: string
+  studentAnswer: number | null
+  correctAnswer: number
+  isCorrect: boolean
+  choices: ExamResultChoiceEntity[]
+}
+
+export interface ExamResultExamInfoEntity {
+  examId: string
+  examPublicId: string
+  examTitle: string
+  courseId: string
+  courseName: string
+  submittedAt: string
+  rateScore: number
+}
+
+export interface ExamResultMetricsEntity {
+  score: number
+  totalQuestions: number
+  correctAnswers: number
+  passed: boolean
+}
+
+export interface ExamResultStudentInfoEntity {
+  studentId: string
+  studentName: string
+  studentCode: string
+  email?: string
+}
+
+export interface ExamResultDetailEntity {
+  submissionId: string
+  exam: ExamResultExamInfoEntity
+  metrics: ExamResultMetricsEntity
+  questions: ExamResultQuestionEntity[]
+  student?: ExamResultStudentInfoEntity
+}
+
+export interface ExamResultDetailResponse {
+  success: boolean
+  data: ExamResultDetailEntity
+  message: string
+}
+
+export const useStudentSubmissionDetail = (
+  submissionId?: string,
+  options?: Omit<
+    UseQueryOptions<ExamResultDetailResponse>,
+    'queryKey' | 'queryFn'
+  >
+) => {
+  const enabled = Boolean(submissionId) && (options?.enabled ?? true)
+
+  return ExamService.useGet<ExamResultDetailResponse>({
+    url: submissionId ? `/submissions/${submissionId}/result` : '',
+    options: {
+      ...options,
+      enabled
+    }
+  })
+}
+
+export const useTeacherSubmissionDetail = (
+  examId?: string,
+  submissionId?: string,
+  options?: Omit<
+    UseQueryOptions<ExamResultDetailResponse>,
+    'queryKey' | 'queryFn'
+  >
+) => {
+  const enabled = Boolean(examId && submissionId) && (options?.enabled ?? true)
+
+  return ExamService.useGet<ExamResultDetailResponse>({
+    url:
+      examId && submissionId
+        ? `/${examId}/submissions/${submissionId}/result`
+        : '',
+    options: {
+      ...options,
+      enabled
+    }
   })
 }

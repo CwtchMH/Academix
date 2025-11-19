@@ -37,6 +37,15 @@ import { SubmitExamDto, SubmissionResultDto } from './dto/submission.dto';
 import { User, UserDocument } from '../../database/schemas/user.schema';
 import { ExamResultsResponseDto, ExamResultDto } from './dto/exam-results.dto';
 import { CompletedExamResponseDto } from './dto/completed-exam.dto';
+import { ExamResultDetailDto } from './dto/exam-result-detail.dto';
+
+type SubmissionWithExam = SubmissionDocument & {
+  examId: ExamDocument & {
+    courseId: CourseDocument;
+    questions: QuestionDocument[];
+  };
+  studentId: Types.ObjectId | UserDocument;
+};
 
 @Injectable()
 export class ExamsService {
@@ -769,7 +778,6 @@ export class ExamsService {
 
     console.log(`Found ${submissions.length} submissions for exam ID:`, examId);
 
-
     // Map submissions thành ExamResultDto
     const results: ExamResultDto[] = [];
 
@@ -802,6 +810,7 @@ export class ExamsService {
       const studentName = student.fullName?.trim() || student.username;
 
       results.push({
+        submissionId: (submission._id as Types.ObjectId).toHexString(),
         studentId: studentIdStr,
         studentName,
         studentCode: studentIdStr,
@@ -825,10 +834,7 @@ export class ExamsService {
    * @param user The authenticated student
    * @returns Danh sách bài thi đã hoàn thành
    */
-  async getMyCompletedExams(
-    user: IUser,
-  ): Promise<CompletedExamResponseDto[]> {
-
+  async getMyCompletedExams(user: IUser): Promise<CompletedExamResponseDto[]> {
     console.log('Fetching completed exams for user ID:', user.id);
     let studentObjectId: Types.ObjectId;
     try {
@@ -836,16 +842,16 @@ export class ExamsService {
     } catch (error) {
       throw new BadRequestException('Invalid user ID format.');
     }
-    console.log('Converted user ID to ObjectId:', studentObjectId.toHexString());
+    console.log(
+      'Converted user ID to ObjectId:',
+      studentObjectId.toHexString(),
+    );
 
     const submissions = await this.submissionModel
       .find({
-          status: 'graded',
-          // Khớp cả ObjectId và string
-          $or: [
-            { studentId: studentObjectId },
-            { studentId: user.id }
-          ],
+        status: 'graded',
+        // Khớp cả ObjectId và string
+        $or: [{ studentId: studentObjectId }, { studentId: user.id }],
       })
       .populate<{ examId: ExamDocument & { courseId: CourseDocument } }>({
         path: 'examId',
@@ -857,7 +863,10 @@ export class ExamsService {
       .sort({ submittedAt: -1 })
       .exec();
 
-    console.log(`Found ${submissions.length} completed submissions for user ID:`, user.id);
+    console.log(
+      `Found ${submissions.length} completed submissions for user ID:`,
+      user.id,
+    );
 
     const results = submissions.map((sub) => {
       const exam = sub.examId;
@@ -874,26 +883,86 @@ export class ExamsService {
       };
     });
 
-    return results.filter(
-      (r): r is CompletedExamResponseDto => r !== null,
-    );
+    return results.filter((r): r is CompletedExamResponseDto => r !== null);
   }
 
   async getSubmissionResult(
     submissionId: string,
     user: IUser,
-  ): Promise<SubmissionResultDto> {
-    const studentId = user.id;
-    console.log('Fetching submission result for submission ID:', submissionId, 'User ID:', studentId);
+  ): Promise<ExamResultDetailDto> {
+    console.log(
+      'Fetching submission result for submission ID:',
+      submissionId,
+      'User ID:',
+      user.id,
+    );
 
-    const submission = await this.submissionModel
+    const submission = await this.loadSubmissionWithExam(submissionId, {
+      includeStudent: false,
+    });
+
+    const submissionStudentId =
+      submission.studentId instanceof Types.ObjectId
+        ? submission.studentId.toHexString()
+        : (
+            (submission.studentId as UserDocument)._id as Types.ObjectId
+          ).toHexString();
+
+    if (submissionStudentId !== user.id) {
+      throw new ForbiddenException(
+        'You are not authorized to view this result.',
+      );
+    }
+
+    return this.mapSubmissionDetail(submission, { includeStudent: false });
+  }
+
+  async getSubmissionResultForTeacher(
+    examId: string,
+    submissionId: string,
+    teacher: IUser,
+  ): Promise<ExamResultDetailDto> {
+    if (!Types.ObjectId.isValid(examId)) {
+      throw new BadRequestException('Invalid exam ID');
+    }
+
+    const submission = await this.loadSubmissionWithExam(submissionId, {
+      includeStudent: true,
+    });
+
+    const exam = submission.examId;
+    const course = exam.courseId;
+
+    if (!exam || !course) {
+      throw new BadRequestException('Exam data is incomplete.');
+    }
+
+    if ((exam._id as Types.ObjectId).toHexString() !== examId) {
+      throw new BadRequestException(
+        'Submission does not belong to the specified exam',
+      );
+    }
+
+    if (String(course.teacherId) !== teacher.id) {
+      throw new ForbiddenException(
+        'You can only view submissions for your own exams',
+      );
+    }
+
+    return this.mapSubmissionDetail(submission, { includeStudent: true });
+  }
+
+  private async loadSubmissionWithExam(
+    submissionId: string,
+    options: { includeStudent: boolean },
+  ): Promise<SubmissionWithExam> {
+    if (!Types.ObjectId.isValid(submissionId)) {
+      throw new BadRequestException('Invalid submission ID');
+    }
+
+    const query = this.submissionModel
       .findById(submissionId)
-      .populate<{
-        examId: ExamDocument & {
-          courseId: CourseDocument;
-          questions: QuestionDocument[];
-        };
-      }>({
+      .populate<SubmissionWithExam['examId']>({
         path: 'examId',
         populate: [
           { path: 'courseId', model: 'Course' },
@@ -901,44 +970,94 @@ export class ExamsService {
         ],
       });
 
+    if (options.includeStudent) {
+      query.populate('studentId', 'fullName username email');
+    }
+
+    const submission = await query.exec();
+
     if (!submission) {
       throw new NotFoundException('Submission not found.');
     }
 
-    // Xác thực student này sở hữu submission
-    // if (submission.studentId.toHexString() !== studentId) {
-    //   throw new ForbiddenException('You are not authorized to view this result.');
-    // }
+    return submission as unknown as SubmissionWithExam;
+  }
 
+  private mapSubmissionDetail(
+    submission: SubmissionWithExam,
+    options: { includeStudent: boolean },
+  ): ExamResultDetailDto {
     const exam = submission.examId;
-    if (!exam || !exam.courseId || !exam.questions) {
+    const course = exam?.courseId as CourseDocument | undefined;
+
+    if (!exam || !course || !exam.questions) {
       throw new BadRequestException('Exam data is incomplete.');
     }
-    
-    const course = exam.courseId;
-    const totalQuestions = exam.questions.length;
 
-    // Chấm lại điểm (chỉ để lấy số câu đúng)
-    let correctCount = 0;
     const answerMap = new Map(
-      submission.answers.map((a) => [a.questionId.toHexString(), a.answerNumber]),
+      submission.answers.map((answer) => [
+        (answer.questionId as Types.ObjectId).toHexString(),
+        answer.answerNumber,
+      ]),
     );
-    for (const question of exam.questions) {
-      if (answerMap.get(question._id.toHexString()) === question.answerQuestion) {
-        correctCount++;
-      }
+
+    const populatedQuestions = exam.questions as unknown as QuestionDocument[];
+
+    const questions = populatedQuestions.map((question) => {
+      const questionId = (question._id as Types.ObjectId).toHexString();
+      const studentAnswer = answerMap.get(questionId) ?? null;
+
+      return {
+        questionId,
+        content: question.content,
+        studentAnswer,
+        correctAnswer: question.answerQuestion,
+        isCorrect: studentAnswer === question.answerQuestion,
+        choices: question.answer.map((choice, index) => ({
+          option: index + 1,
+          content: choice.content,
+          isCorrect: choice.isCorrect,
+        })),
+      };
+    });
+
+    const correctAnswers = questions.filter(
+      (question) => question.isCorrect,
+    ).length;
+
+    const detail: ExamResultDetailDto = {
+      submissionId: (submission._id as Types.ObjectId).toHexString(),
+      exam: {
+        examId: (exam._id as Types.ObjectId).toHexString(),
+        examPublicId: exam.publicId,
+        examTitle: exam.title,
+        courseId: (course._id as Types.ObjectId).toHexString(),
+        courseName: course.courseName,
+        submittedAt: submission.submittedAt ?? submission.createdAt,
+        rateScore: exam.rateScore,
+      },
+      metrics: {
+        score: submission.score,
+        totalQuestions: questions.length,
+        correctAnswers,
+        passed: submission.score >= exam.rateScore,
+      },
+      questions,
+    };
+
+    if (
+      options.includeStudent &&
+      !(submission.studentId instanceof Types.ObjectId)
+    ) {
+      const studentDoc = submission.studentId as UserDocument;
+      detail.student = {
+        studentId: (studentDoc._id as Types.ObjectId).toHexString(),
+        studentName: studentDoc.fullName ?? studentDoc.username,
+        studentCode: studentDoc.username,
+        email: studentDoc.email,
+      };
     }
 
-    return {
-      examTitle: exam.title,
-      courseName: course.courseName,
-      // ensure a Date is returned (fallback to now)
-      dateTaken: submission.submittedAt ?? new Date(),
-      totalQuestions: totalQuestions,
-      correctAnswers: correctCount,
-      score: submission.score,
-      result: submission.score >= exam.rateScore ? 'Passed' : 'Failed',
-      submissionId: (submission._id as Types.ObjectId).toHexString(),
-    };
+    return detail;
   }
 }

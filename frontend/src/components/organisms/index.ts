@@ -5,6 +5,7 @@ export { ResetPasswordCard } from './ResetPasswordCard'
 export { MainLayout } from './MainLayout'
 export { FinalizeExamModal } from './FinalizeExamModal'
 export { CreateCourseModal } from './CreateCourseModal'
+export { ExamResultDetail } from './ExamResultDetail'
 
 export type { LoginCardProps } from './LoginCard'
 export type { RegisterCardProps } from './RegisterCard'
@@ -19,3 +20,4 @@ export type {
   CreateCourseModalProps,
   CreateCourseFormValues
 } from './CreateCourseModal'
+export type { ExamResultDetailProps } from './ExamResultDetail'
