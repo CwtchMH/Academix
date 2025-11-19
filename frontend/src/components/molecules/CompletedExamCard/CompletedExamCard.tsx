@@ -1,42 +1,23 @@
 // src/components/molecules/CompletedExamCard.tsx
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useExamResultStore } from '@/stores/examResult.store';
-import { ExamService } from '@/services'; // Import service
-import type { CompletedExamResponse } from '@/services/types/api.types';
-import type { SubmissionResult } from '@/app/(privateLayout)/dashboard/student/exams/types/exam.types';
+import { useRouter } from 'next/navigation'
+import type { CompletedExamResponse } from '@/services/types/api.types'
 
 interface CompletedExamCardProps {
-  exam: CompletedExamResponse;
+  exam: CompletedExamResponse
 }
 
 export const CompletedExamCard = ({ exam }: CompletedExamCardProps) => {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const setResult = useExamResultStore((state) => state.setResult);
+  const router = useRouter()
 
-  const isPassed = exam.result === 'Passed';
+  const isPassed = exam.result === 'Passed'
 
   const handleViewResult = async () => {
-    setIsLoading(true);
-    try {
-      // Gọi API mới để lấy chi tiết kết quả
-      const resultData = await ExamService.apiMethod.get<SubmissionResult>({
-        url: `/submissions/${exam.submissionId}/result`,
-      });
-      // Lưu vào store
-      setResult(resultData);
-      // Chuyển trang
-      router.push(`/dashboard/student/exams/${exam.examPublicId}/result`);
-    } catch (error) {
-      console.error('Failed to fetch exam result:', error);
-      alert('Could not load exam result.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    router.push(
+      `/dashboard/student/exams/${exam.examPublicId}/result?submissionId=${exam.submissionId}`
+    )
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -74,14 +55,11 @@ export const CompletedExamCard = ({ exam }: CompletedExamCardProps) => {
       </div>
       <button
         onClick={handleViewResult}
-        disabled={isLoading}
         className="btn-primary !text-white flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium shadow-sm"
       >
         {/* <span className="material-symbols-outlined text-base">visibility</span> */}
-        <span className="truncate">
-          {isLoading ? 'Loading...' : 'View Result'}
-        </span>
+        <span className="truncate">View Result</span>
       </button>
     </div>
-  );
-};
+  )
+}

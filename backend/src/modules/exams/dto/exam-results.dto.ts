@@ -5,6 +5,12 @@ import { ApiProperty } from '@nestjs/swagger';
  */
 export class ExamResultDto {
   @ApiProperty({
+    description: 'Submission ID (MongoDB ObjectId)',
+    example: '652fd6a7e5a69c0012345600',
+  })
+  submissionId: string;
+
+  @ApiProperty({
     description: 'Student ID (MongoDB ObjectId)',
     example: '652fd6a7e5a69c0012345678',
   })

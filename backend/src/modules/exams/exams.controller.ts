@@ -32,7 +32,7 @@ import { JoinExamDto } from './dto/join-exam.dto';
 import { SubmissionResultDto, SubmitExamDto } from './dto/submission.dto';
 import { ExamResultsResponseDto } from './dto/exam-results.dto';
 import { CompletedExamResponseDto } from './dto/completed-exam.dto';
-
+import { ExamResultDetailDto } from './dto/exam-result-detail.dto';
 
 @ApiTags('Exams')
 @ApiBearerAuth()
@@ -489,18 +489,41 @@ export class ExamsController {
     );
   }
 
+  @Get(':examId/submissions/:submissionId/result')
+  @Roles('teacher')
+  @ApiOperation({ summary: 'Get a student submission detail for a given exam' })
+  @ApiResponse({ status: 200, type: ExamResultDetailDto })
+  async getSubmissionResultForTeacher(
+    @Param('examId') examId: string,
+    @Param('submissionId') submissionId: string,
+    @CurrentUser() user: IUser,
+  ): Promise<ApiResponseDto<ExamResultDetailDto>> {
+    const detail = await this.examsService.getSubmissionResultForTeacher(
+      examId,
+      submissionId,
+      user,
+    );
+    return ResponseHelper.success(
+      detail,
+      'Submission detail retrieved successfully',
+    );
+  }
+
   @Get('submissions/:submissionId/result')
   @Roles('student')
   @ApiOperation({ summary: 'Get a specific exam result by submission ID' })
   @ApiResponse({
     status: 200,
-    type: SubmissionResultDto,
+    type: ExamResultDetailDto,
   })
   async getSubmissionResult(
     @Param('submissionId') submissionId: string,
     @CurrentUser() user: IUser,
-  ): Promise<SubmissionResultDto> {
-    return this.examsService.getSubmissionResult(submissionId, user);
+  ): Promise<ApiResponseDto<ExamResultDetailDto>> {
+    const detail = await this.examsService.getSubmissionResult(
+      submissionId,
+      user,
+    );
+    return ResponseHelper.success(detail, 'Exam result retrieved successfully');
   }
 }
-
