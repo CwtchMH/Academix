@@ -140,12 +140,17 @@ const UploadImage = ({
       console.error('Upload error:', error);
       messageApi.destroy('ai-validate'); // Close loading message
       
-      // Display error from AI (400 Bad Request)
-      if (error.response?.data?.message) {
-        messageApi.error(error.response.data.message);
-      } else {
-        messageApi.error('Upload failed. Please try again.');
-      }
+      // // Display error from AI (400 Bad Request)
+      const errorMessage = 
+        error.response?.data?.error?.message || // Get detailed message from your error structure
+        error.response?.data?.message ||        // Fallback for default NestJS error structure
+        'Upload failed. Please try again.';
+
+      // Show errors to users (longer time to read: 10s)
+      messageApi.error({
+        content: errorMessage,
+        duration: 10, 
+      });
     } finally {
       setUploading(false)
     }
