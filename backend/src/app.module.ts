@@ -14,6 +14,7 @@ import { CertificateModule } from './modules/certificates/certificate.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { CertificateVerificationModule } from './modules/certificate-verification/certificate-verification.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -70,6 +71,7 @@ import {
     CoursesModule,
     ExamsModule,
     DashboardModule,
+    CertificateVerificationModule,
   ],
   controllers: [AppController],
   providers: [
