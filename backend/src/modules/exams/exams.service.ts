@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
@@ -38,6 +39,8 @@ import { User, UserDocument } from '../../database/schemas/user.schema';
 import { ExamResultsResponseDto, ExamResultDto } from './dto/exam-results.dto';
 import { CompletedExamResponseDto } from './dto/completed-exam.dto';
 import { ExamResultDetailDto } from './dto/exam-result-detail.dto';
+import { ExamStatusTransition } from './dto/update-exam-status.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type SubmissionWithExam = SubmissionDocument & {
   examId: ExamDocument & {
@@ -49,6 +52,8 @@ type SubmissionWithExam = SubmissionDocument & {
 
 @Injectable()
 export class ExamsService {
+  private readonly logger = new Logger(ExamsService.name);
+
   constructor(
     @InjectModel(Exam.name)
     private readonly examModel: Model<ExamDocument>,
@@ -65,6 +70,7 @@ export class ExamsService {
     private submissionModel: Model<SubmissionDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createExam(
@@ -329,18 +335,142 @@ export class ExamsService {
     };
   }
 
+  private async emitTeacherExamStatusNotification(
+    previousExam: ExamDocument,
+    currentExam: ExamDocument,
+    course: CourseDocument,
+  ): Promise<void> {
+    const fromStatus = previousExam.status;
+    const toStatus = currentExam.status;
+
+    if (fromStatus === toStatus) {
+      return;
+    }
+
+    let title: string;
+    let message: string;
+    let type: 'exam_scheduled_to_active' | 'exam_active_to_completed' | null =
+      null;
+
+    if (fromStatus === 'scheduled' && toStatus === 'active') {
+      type = 'exam_scheduled_to_active';
+      title = `Exam "${currentExam.title}" is now active`;
+      message =
+        'Your scheduled exam has started. Students can now join and submit.';
+    } else if (fromStatus === 'active' && toStatus === 'completed') {
+      type = 'exam_active_to_completed';
+      title = `Exam "${currentExam.title}" has completed`;
+      message =
+        'The exam has completed. Review submissions and publish results.';
+    } else {
+      return;
+    }
+
+    const teacherObjectId = course.teacherId as Types.ObjectId;
+
+    try {
+      await this.notificationsService.createNotification({
+        recipientId: teacherObjectId.toHexString(),
+        audience: 'teacher',
+        category: 'exam',
+        type,
+        title,
+        message,
+        actionUrl: `/dashboard/teacher/exams/${currentExam.publicId}`,
+        examId: (currentExam._id as Types.ObjectId).toHexString(),
+        metadata: {
+          examPublicId: currentExam.publicId,
+          fromStatus,
+          toStatus,
+          examTitle: currentExam.title,
+          triggeredAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : 'Unknown notification error';
+      this.logger.warn(`Failed to emit exam notification: ${reason}`);
+    }
+  }
+
+  async processAutomaticStatusTransitions(): Promise<void> {
+    const now = new Date();
+    const candidates = await this.examModel
+      .find({
+        $or: [
+          { status: 'scheduled', startTime: { $lte: now } },
+          { status: 'active', endTime: { $lte: now } },
+        ],
+      })
+      .lean()
+      .exec();
+
+    for (const candidate of candidates) {
+      const candidateStart = new Date(candidate.startTime);
+      const candidateEnd = new Date(candidate.endTime);
+      const shouldActivate =
+        candidate.status === 'scheduled' && candidateStart <= now;
+      const shouldComplete =
+        candidate.status === 'active' && candidateEnd <= now;
+      const nextStatus = shouldActivate
+        ? 'active'
+        : shouldComplete
+          ? 'completed'
+          : null;
+
+      if (!nextStatus) {
+        continue;
+      }
+
+      const updatedExam = await this.examModel.findOneAndUpdate(
+        { _id: candidate._id, status: candidate.status },
+        { $set: { status: nextStatus, updatedAt: now } },
+        { new: true },
+      );
+
+      if (!updatedExam) {
+        continue;
+      }
+
+      const course = await this.courseModel.findById(updatedExam.courseId);
+      if (!course) {
+        continue;
+      }
+
+      const previousExam = this.examModel.hydrate(candidate);
+      await this.emitTeacherExamStatusNotification(
+        previousExam,
+        updatedExam,
+        course,
+      );
+    }
+  }
+
   /**
    * Fetch full exam details including all questions and answers.
    * @param examId The MongoDB ObjectId of the exam
    * @param teacher The authenticated teacher
    * @returns The complete exam with questions
    */
-  async findExamById(examId: string, teacher: IUser): Promise<ExamResponseDto> {
-    if (!Types.ObjectId.isValid(examId)) {
-      throw new BadRequestException('Invalid exam ID');
+  private buildExamLookupFilter(identifier: string) {
+    if (Types.ObjectId.isValid(identifier)) {
+      return { _id: new Types.ObjectId(identifier) };
     }
+    return { publicId: identifier };
+  }
 
-    const exam = await this.examModel.findById(examId).exec();
+  private findExamByIdOrPublicId(
+    identifier: string,
+  ): Promise<ExamDocument | null> {
+    return this.examModel
+      .findOne(this.buildExamLookupFilter(identifier))
+      .exec();
+  }
+
+  async findExamById(examId: string, teacher: IUser): Promise<ExamResponseDto> {
+    const filter = this.buildExamLookupFilter(examId);
+
+    const exam = await this.examModel.findOne(filter).exec();
 
     if (!exam) {
       throw new NotFoundException('Exam not found');
@@ -384,12 +514,10 @@ export class ExamsService {
       throw new ForbiddenException('Invalid teacher identifier');
     }
 
-    if (!Types.ObjectId.isValid(examId)) {
-      throw new BadRequestException('Invalid exam ID');
-    }
-
     // Find existing exam
-    const existingExam = await this.examModel.findById(examId).exec();
+    const existingExam = await this.examModel
+      .findOne(this.buildExamLookupFilter(examId))
+      .exec();
     if (!existingExam) {
       throw new NotFoundException('Exam not found');
     }
@@ -486,6 +614,12 @@ export class ExamsService {
       if (!updatedExam) {
         throw new NotFoundException('Exam not found during update');
       }
+
+      await this.emitTeacherExamStatusNotification(
+        existingExam,
+        updatedExam,
+        course,
+      );
 
       await session.commitTransaction();
 
@@ -1059,5 +1193,94 @@ export class ExamsService {
     }
 
     return detail;
+  }
+
+  async transitionExamStatus(
+    examId: string,
+    nextStatus: ExamStatusTransition,
+    actor: IUser,
+  ): Promise<ExamResponseDto> {
+    const exam = await this.examModel
+      .findOne(this.buildExamLookupFilter(examId))
+      .populate('courseId')
+      .populate('questions')
+      .exec();
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    const course = exam.courseId as unknown as CourseDocument | undefined;
+
+    if (!course) {
+      throw new BadRequestException('Exam course not found');
+    }
+
+    if (actor.role === 'teacher' && String(course.teacherId) !== actor.id) {
+      throw new ForbiddenException(
+        'You can only transition exams for your courses',
+      );
+    }
+
+    if (exam.status === nextStatus) {
+      return this.mapExamResponse(
+        exam,
+        exam.questions as unknown as QuestionDocument[],
+      );
+    }
+
+    const isValidTransition =
+      (exam.status === 'scheduled' &&
+        nextStatus === ExamStatusTransition.Active) ||
+      (exam.status === 'active' &&
+        nextStatus === ExamStatusTransition.Completed);
+
+    if (!isValidTransition) {
+      throw new BadRequestException('Unsupported status transition');
+    }
+
+    const now = new Date();
+
+    if (nextStatus === ExamStatusTransition.Active && now < exam.startTime) {
+      throw new BadRequestException('Cannot activate before start time');
+    }
+
+    if (nextStatus === ExamStatusTransition.Completed && now < exam.endTime) {
+      throw new BadRequestException('Cannot complete before end time');
+    }
+
+    const previousExam = this.examModel.hydrate(exam.toObject());
+    exam.status = nextStatus;
+    exam.updatedAt = now;
+
+    await exam.save();
+    await this.emitTeacherExamStatusNotification(previousExam, exam, course);
+
+    return this.mapExamResponse(
+      exam,
+      exam.questions as unknown as QuestionDocument[],
+    );
+  }
+
+  async deleteExam(examId: string, user: IUser): Promise<void> {
+    const exam = await this.findExamByIdOrPublicId(examId);
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    const course = await this.courseModel.findById(exam.courseId);
+
+    if (!course) {
+      throw new NotFoundException('Exam course not found');
+    }
+
+    if (String(course.teacherId) !== user.id) {
+      throw new ForbiddenException('You can only delete exams you own');
+    }
+
+    await this.questionModel.deleteMany({ _id: { $in: exam.questions } });
+    await this.submissionModel.deleteMany({ examId: exam._id });
+    await this.examModel.deleteOne({ _id: exam._id });
   }
 }

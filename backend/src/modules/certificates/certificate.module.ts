@@ -17,6 +17,7 @@ import { BlockchainService } from '../../common/services/blockchain.service';
 import { PinataService } from '../../common/services/pinata.service';
 import { CertificateImageService } from '../../common/services/certificate-image.service';
 import { CertificateGenerationService } from '../../common/services/certificate-generation.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CertificateGenerationService } from '../../common/services/certificate-
       { name: Submission.name, schema: SubmissionSchema },
       { name: Exam.name, schema: ExamSchema },
     ]),
+    NotificationsModule,
   ],
   controllers: [CertificateController],
   providers: [

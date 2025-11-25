@@ -6,6 +6,7 @@ import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { WagmiProvider } from 'wagmi'
 import { avalancheFuji } from 'wagmi/chains'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import { NotificationSocketProvider } from '@/providers/NotificationProvider'
 
 const config = getDefaultConfig({
   appName: 'Web3 App',
@@ -36,7 +37,9 @@ export function Web3Providers({ children }: { children: React.ReactNode }) {
     <ClientOnly>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider>{children}</RainbowKitProvider>
+          <NotificationSocketProvider>
+            <RainbowKitProvider>{children}</RainbowKitProvider>
+          </NotificationSocketProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </ClientOnly>

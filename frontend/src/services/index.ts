@@ -216,6 +216,9 @@ export const EXAM_SERVICE_ENDPOINT = getApiEndpoint(API_SERVICES.EXAM_SERVICE)
 export const DASHBOARD_SERVICE_ENDPOINT = getApiEndpoint(
   API_SERVICES.DASHBOARD_SERVICE
 )
+export const NOTIFICATION_SERVICE_ENDPOINT = getApiEndpoint(
+  API_SERVICES.NOTIFICATION_SERVICE
+)
 
 // Export API service methods
 export const TestService = new ApiService(TEST_SERVICE_ENDPOINT)
@@ -224,6 +227,7 @@ export const CourseService = new ApiService(COURSE_SERVICE_ENDPOINT)
 export const ExamService = new ApiService(EXAM_SERVICE_ENDPOINT)
 export const CertificateService = new ApiService(CERTIFICATE_SERVICE_ENDPOINT)
 export const DashboardService = new ApiService(DASHBOARD_SERVICE_ENDPOINT)
+export const NotificationService = new ApiService(NOTIFICATION_SERVICE_ENDPOINT)
 
 // Export organized services
 export * from './api'

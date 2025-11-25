@@ -4,6 +4,7 @@ export const resolveActiveSidebarItem = (path: string): string | null => {
   const normalized = path.replace(/\/+$/, '') || '/'
 
   const routeMatchers: Array<{ id: string; pattern: RegExp }> = [
+    { id: 'notifications', pattern: /\/dashboard\/notifications(\/|$)/ },
     { id: 'courses', pattern: /\/courses(\/|$)/ },
     { id: 'students', pattern: /\/students(\/|$)/ },
     { id: 'exams', pattern: /\/exams(\/|$)/ },

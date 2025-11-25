@@ -9,9 +9,5 @@ export default function MainLayoutWrapper({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <MainLayout hasNotification={true} initialActiveItem="dashboard">
-      {children}
-    </MainLayout>
-  )
+  return <MainLayout initialActiveItem="dashboard">{children}</MainLayout>
 }
