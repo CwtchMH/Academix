@@ -41,6 +41,7 @@ export interface ExamQuestionEntity {
 
 export interface ExamEntity {
   id: string
+  publicId: string
   title: string
   durationMinutes: number
   startTime: string
@@ -160,6 +161,37 @@ export const useUpdateExam = (
       return ExamService.apiMethod.put<UpdateExamResponse>({
         url: `/${examId}`,
         data
+      })
+    },
+    ...options
+  })
+}
+
+export interface DeleteExamResponse {
+  success: boolean
+  data: null
+  message: string
+}
+
+export interface DeleteExamVariables {
+  examId: string
+}
+
+export const useDeleteExam = (
+  options?: Omit<
+    UseMutationOptions<
+      DeleteExamResponse,
+      unknown,
+      DeleteExamVariables,
+      unknown
+    >,
+    'mutationFn'
+  >
+) => {
+  return useMutation({
+    mutationFn: async ({ examId }: DeleteExamVariables) => {
+      return ExamService.apiMethod.delete<DeleteExamResponse>({
+        url: `/${examId}`
       })
     },
     ...options

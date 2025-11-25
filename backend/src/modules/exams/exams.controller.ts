@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
 } from '@nestjs/common';
@@ -33,6 +35,10 @@ import { SubmissionResultDto, SubmitExamDto } from './dto/submission.dto';
 import { ExamResultsResponseDto } from './dto/exam-results.dto';
 import { CompletedExamResponseDto } from './dto/completed-exam.dto';
 import { ExamResultDetailDto } from './dto/exam-result-detail.dto';
+import {
+  ExamStatusTransition,
+  UpdateExamStatusDto,
+} from './dto/update-exam-status.dto';
 
 @ApiTags('Exams')
 @ApiBearerAuth()
@@ -376,6 +382,44 @@ export class ExamsController {
   ): Promise<ApiResponseDto<{ exam: ExamResponseDto }>> {
     const exam = await this.examsService.updateExam(id, updateExamDto, user);
     return ResponseHelper.success({ exam }, 'Exam updated successfully');
+  }
+
+  @Patch(':id/status')
+  @Roles('teacher', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Manually transition an exam status' })
+  @ApiResponse({ status: 200, description: 'Exam status updated successfully' })
+  @ApiBody({ type: UpdateExamStatusDto })
+  async transitionExamStatus(
+    @Param('id') id: string,
+    @Body() body: UpdateExamStatusDto,
+    @CurrentUser() user: IUser,
+  ): Promise<ApiResponseDto<{ exam: ExamResponseDto }>> {
+    const exam = await this.examsService.transitionExamStatus(
+      id,
+      body.status,
+      user,
+    );
+
+    const message =
+      body.status === ExamStatusTransition.Active
+        ? 'Exam marked as active'
+        : 'Exam marked as completed';
+
+    return ResponseHelper.success({ exam }, message);
+  }
+
+  @Delete(':id')
+  @Roles('teacher')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete an exam and its questions' })
+  @ApiResponse({ status: 200, description: 'Exam deleted successfully' })
+  async deleteExam(
+    @Param('id') id: string,
+    @CurrentUser() user: IUser,
+  ): Promise<ApiResponseDto<null>> {
+    await this.examsService.deleteExam(id, user);
+    return ResponseHelper.success(null, 'Exam deleted successfully');
   }
 
   @Post('join')

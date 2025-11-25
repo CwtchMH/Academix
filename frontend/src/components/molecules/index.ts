@@ -12,6 +12,7 @@ export { CourseCard } from './CourseCard'
 export { FilterBar } from './FilterBar'
 export { ImageUploadArea } from './ImageUploadArea'
 export { ExamPerformanceChart } from './ExamPerformanceChart'
+export { NotificationMenu } from './NotificationMenu/NotificationMenu'
 
 export type { FormFieldProps } from './FormField'
 export type { LoginFormProps, LoginFormData } from './LoginForm'

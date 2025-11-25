@@ -14,6 +14,8 @@ import {
   SubmissionSchema,
 } from '../../database/schemas/submission.schema';
 import { User, UserSchema } from '../../database/schemas/user.schema';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { ExamStatusScheduler } from './exam-status.scheduler';
 
 @Module({
   imports: [
@@ -24,9 +26,10 @@ import { User, UserSchema } from '../../database/schemas/user.schema';
       { name: Submission.name, schema: SubmissionSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    NotificationsModule,
   ],
   controllers: [ExamsController],
-  providers: [ExamsService],
+  providers: [ExamsService, ExamStatusScheduler],
   exports: [ExamsService],
 })
 export class ExamsModule {}

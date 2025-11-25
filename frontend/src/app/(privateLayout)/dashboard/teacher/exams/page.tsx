@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Spin, Tooltip } from 'antd'
+import { useCallback, useMemo } from 'react'
+import { App, Spin, Tooltip } from 'antd'
 import { Badge, Button, Icon, Input, Select } from '@/components/atoms'
 import { useRouter } from 'next/navigation'
-import { useExams } from '@/services/api/exam.api'
+import { useDeleteExam, useExams } from '@/services/api/exam.api'
 import { useAuth } from '@/stores/auth'
 
 type ExamStatus = 'active' | 'scheduled' | 'completed'
@@ -75,6 +75,7 @@ const formatDateTime = (isoString: string) => {
 }
 
 export default function ExamsPage() {
+  const { message, modal } = App.useApp()
   const router = useRouter()
   const { user } = useAuth()
   const {
@@ -87,6 +88,20 @@ export default function ExamsPage() {
   } = useExams(user?.id ?? '', {
     enabled: Boolean(user?.id),
     refetchOnWindowFocus: false
+  })
+
+  const deleteExamMutation = useDeleteExam({
+    onSuccess: async () => {
+      message.success('Exam deleted successfully')
+      await refetch()
+    },
+    onError: (mutationError: unknown) => {
+      const reason =
+        mutationError instanceof Error
+          ? mutationError.message
+          : 'Unable to delete exam'
+      message.error(reason)
+    }
   })
 
   const exams = examsResponse?.data.exams ?? []
@@ -109,6 +124,42 @@ export default function ExamsPage() {
   const handleCreateExam = () => {
     router.push('/dashboard/teacher/exams/create')
   }
+
+  const handleCopyExamCode = useCallback(
+    (code: string) => {
+      if (!code) {
+        return
+      }
+
+      if (!navigator?.clipboard) {
+        message.error('Clipboard access is not available in this browser.')
+        return
+      }
+
+      navigator.clipboard
+        .writeText(code)
+        .then(() => message.success('Exam code copied to clipboard'))
+        .catch(() => message.error('Failed to copy exam code'))
+    },
+    [message]
+  )
+
+  const handleDeleteExam = useCallback(
+    (exam: ExamRow) => {
+      modal.confirm({
+        title: 'Delete exam',
+        content: `This will permanently remove exam ${exam.code} regardless of its status. This action cannot be undone.`,
+        okText: 'Delete',
+        okButtonProps: { danger: true },
+        cancelText: 'Cancel',
+        centered: true,
+        onOk: async () => {
+          await deleteExamMutation.mutateAsync({ examId: exam.id })
+        }
+      })
+    },
+    [deleteExamMutation, modal]
+  )
 
   return (
     <div className="space-y-4">
@@ -199,8 +250,23 @@ export default function ExamsPage() {
                   {examRows.length > 0 ? (
                     examRows.map((exam) => (
                       <tr key={exam.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          {exam.code}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-medium text-slate-900">
+                              {exam.code}
+                            </span>
+                            <Tooltip title="Copy exam code">
+                              <Button
+                                size="small"
+                                variant="outline"
+                                className="!px-2"
+                                onClick={() => handleCopyExamCode(exam.code)}
+                                aria-label="Copy exam code"
+                              >
+                                Copy
+                              </Button>
+                            </Tooltip>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <Badge
@@ -216,6 +282,18 @@ export default function ExamsPage() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="small"
+                              variant="outline"
+                              className="!px-3"
+                              onClick={() =>
+                                router.push(
+                                  `/dashboard/teacher/exams/${exam.code}`
+                                )
+                              }
+                            >
+                              View Details
+                            </Button>
                             <Button
                               size="small"
                               variant="outline"
@@ -251,6 +329,26 @@ export default function ExamsPage() {
                                 }}
                               >
                                 Edit
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Delete exam">
+                              <Button
+                                size="small"
+                                variant="outline"
+                                className="!px-3 !text-red-600"
+                                disabled={
+                                  deleteExamMutation.isPending &&
+                                  deleteExamMutation.variables?.examId ===
+                                    exam.id
+                                }
+                                loading={
+                                  deleteExamMutation.isPending &&
+                                  deleteExamMutation.variables?.examId ===
+                                    exam.id
+                                }
+                                onClick={() => handleDeleteExam(exam)}
+                              >
+                                Delete
                               </Button>
                             </Tooltip>
                           </div>

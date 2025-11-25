@@ -4,7 +4,8 @@ export enum API_SERVICES {
   EXAM_SERVICE = 'exams',
   COURSE_SERVICE = 'courses',
   CERTIFICATE_SERVICE = 'certificates',
-  DASHBOARD_SERVICE = 'dashboard'
+  DASHBOARD_SERVICE = 'dashboard',
+  NOTIFICATION_SERVICE = 'notifications'
 }
 
 export const getApiEndpoint = (service: API_SERVICES): string => {

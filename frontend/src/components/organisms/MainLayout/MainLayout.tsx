@@ -11,8 +11,7 @@ import { resolveActiveSidebarItem } from '@/utils/navigation'
 export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   className = '',
-  initialActiveItem = 'dashboard',
-  hasNotification = false
+  initialActiveItem = 'dashboard'
 }) => {
   const router = useRouter()
   const pathname = usePathname()
@@ -85,7 +84,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
       {/* Main Content Area */}
       <div className="flex h-screen flex-1 flex-col min-w-0">
-        <Navbar hasNotification={hasNotification} />
+        <Navbar />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>

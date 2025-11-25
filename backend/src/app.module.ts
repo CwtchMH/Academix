@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
@@ -35,6 +36,11 @@ import {
   Certificate,
   CertificateSchema,
 } from './database/schemas/certificate.schema';
+import {
+  Notification,
+  NotificationSchema,
+} from './database/schemas/notification.schema';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -43,6 +49,7 @@ import {
       load: [appConfig, databaseConfig, jwtConfig, pinataConfig],
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -64,6 +71,7 @@ import {
       { name: Exam.name, schema: ExamSchema },
       { name: Submission.name, schema: SubmissionSchema },
       { name: Certificate.name, schema: CertificateSchema },
+      { name: Notification.name, schema: NotificationSchema },
     ]),
     AuthModule,
     HealthModule,
@@ -72,6 +80,7 @@ import {
     ExamsModule,
     DashboardModule,
     CertificateVerificationModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

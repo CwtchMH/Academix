@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type MouseEvent, type ReactNode } from 'react'
 
 export type ButtonVariant =
   | 'primary'
@@ -14,7 +14,7 @@ export interface ButtonProps {
   fullWidth?: boolean
   loading?: boolean
   disabled?: boolean
-  onClick?: () => void
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   htmlType?: 'button' | 'submit' | 'reset'
   className?: string
 }

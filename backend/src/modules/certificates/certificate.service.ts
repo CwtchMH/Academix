@@ -19,6 +19,7 @@ import { Exam, ExamDocument } from 'src/database/schemas/exam.schema';
 import { BlockchainService } from '../../common/services/blockchain.service';
 import { DEFAULT_NFT_RECIPIENT } from '../../common/utils/constant';
 import { CertificateGenerationService } from '../../common/services/certificate-generation.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CertificateService {
@@ -37,6 +38,7 @@ export class CertificateService {
     private readonly examModel: Model<ExamDocument>,
     private readonly blockchainService: BlockchainService,
     private readonly certificateGenerationService: CertificateGenerationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async issue(dto: IssueCertificateDto) {
@@ -62,6 +64,9 @@ export class CertificateService {
 
     const exam = await this.examModel.findById(examId);
     if (!exam) throw new NotFoundException('Exam not found');
+
+    const course = await this.courseModel.findById(exam.courseId);
+    if (!course) throw new NotFoundException('Course not found');
 
     const student = await this.userModel.findById(dto.studentId);
     if (!student) throw new NotFoundException('Student not found');
@@ -213,12 +218,21 @@ export class CertificateService {
       );
     }
 
-    return await this.certificateModel
+    const hydratedCertificate = await this.certificateModel
       .findById(savedCertificate._id)
       .populate('studentId', 'username email fullName role')
       .populate('courseId', 'courseName')
       .populate('submissionId', 'score submittedAt')
       .lean();
+
+    await this.dispatchCertificateNotification({
+      certificateId: (savedCertificate._id as Types.ObjectId).toHexString(),
+      studentId: (student._id as Types.ObjectId).toHexString(),
+      courseName: course.courseName,
+      examTitle: exam.title,
+    });
+
+    return hydratedCertificate;
   }
 
   async list(query: CertificatesQueryDto) {
@@ -351,5 +365,37 @@ export class CertificateService {
       .populate('courseId', 'courseName')
       .populate('submissionId', 'score submittedAt')
       .lean();
+  }
+
+  private async dispatchCertificateNotification(params: {
+    certificateId: string;
+    studentId: string;
+    courseName: string;
+    examTitle: string;
+  }): Promise<void> {
+    try {
+      await this.notificationsService.createNotification({
+        recipientId: params.studentId,
+        audience: 'student',
+        category: 'certificate',
+        type: 'certificate_issued',
+        title: `Certificate issued for ${params.courseName}`,
+        message: `You have received a certificate for ${params.courseName}. View the on-chain proof and share your achievement.`,
+        actionUrl: `/certificate?highlight=${params.certificateId}`,
+        certificateId: params.certificateId,
+        metadata: {
+          courseName: params.courseName,
+          examTitle: params.examTitle,
+          certificateId: params.certificateId,
+          issuedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to send notification';
+      this.logger.warn(
+        `Unable to dispatch certificate notification: ${message}`,
+      );
+    }
   }
 }
