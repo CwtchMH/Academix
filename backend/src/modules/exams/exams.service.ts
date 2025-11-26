@@ -41,6 +41,11 @@ import { CompletedExamResponseDto } from './dto/completed-exam.dto';
 import { ExamResultDetailDto } from './dto/exam-result-detail.dto';
 import { ExamStatusTransition } from './dto/update-exam-status.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  ExamStatusFilter,
+  ListExamsQueryDto,
+} from './dto/list-exams-query.dto';
+import { PaginationDto } from '../../common/dto/response.dto';
 
 type SubmissionWithExam = SubmissionDocument & {
   examId: ExamDocument & {
@@ -163,10 +168,21 @@ export class ExamsService {
     }
   }
 
-  async listExamSummaries(teacherId?: string): Promise<ExamSummaryDto[]> {
+  async listExamSummaries(
+    teacherId?: string,
+    queryDto?: ListExamsQueryDto,
+  ): Promise<{ exams: ExamSummaryDto[]; pagination: PaginationDto }> {
     const now = new Date();
 
-    let query = {};
+    const {
+      search = '',
+      status = ExamStatusFilter.All,
+      page = 1,
+      limit = 10,
+    } = queryDto ?? {};
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = {};
 
     // If teacherId is provided, filter exams by courses owned by that teacher
     if (teacherId) {
@@ -183,21 +199,62 @@ export class ExamsService {
       const courseIds = courses.map((course) => course._id);
 
       // Filter exams by these course IDs
-      query = { courseId: { $in: courseIds } };
+      query.courseId = { $in: courseIds };
     }
 
+    // Apply search filter (publicId or title)
+    if (search) {
+      query.$or = [
+        { publicId: { $regex: search, $options: 'i' } },
+        { title: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Apply status filter
+    if (status && status !== ExamStatusFilter.All) {
+      query.status = status;
+    }
+
+    // Get total count for pagination
+    const total = await this.examModel.countDocuments(query).exec();
+
+    // Calculate skip for pagination
+    const skip = (page - 1) * limit;
+
     const exams = await this.examModel
-      .find(query, { publicId: 1, startTime: 1, endTime: 1, status: 1 })
-      .sort({ startTime: 1 })
+      .find(query, {
+        publicId: 1,
+        title: 1,
+        startTime: 1,
+        endTime: 1,
+        status: 1,
+      })
+      .sort({ startTime: -1 })
+      .skip(skip)
+      .limit(limit)
       .exec();
 
-    return exams.map((exam) => ({
+    const totalPages = Math.ceil(total / limit);
+
+    const pagination: PaginationDto = {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    };
+
+    const examSummaries: ExamSummaryDto[] = exams.map((exam) => ({
       id: String(exam._id),
       publicId: exam.publicId,
+      title: exam.title,
       status: computeExamStatus(now, exam.startTime, exam.endTime, exam.status),
       startTime: exam.startTime,
       endTime: exam.endTime,
     }));
+
+    return { exams: examSummaries, pagination };
   }
 
   private ensureValidDates(startTime: Date, endTime: Date) {

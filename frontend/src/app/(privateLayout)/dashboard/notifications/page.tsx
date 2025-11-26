@@ -67,7 +67,8 @@ export default function NotificationsPage() {
   const { data, isLoading, isFetching, isError, refetch } = useNotifications(
     queryParams,
     {
-      staleTime: 15_000
+      staleTime: 15_000,
+      refetchOnMount: 'always'
     }
   )
 
@@ -138,7 +139,7 @@ export default function NotificationsPage() {
                   onClick={() => handleCategoryChange(filter.value)}
                   className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
                     category === filter.value
-                      ? 'border-slate-900 bg-slate-900 text-white'
+                      ? 'border-slate-900 bg-indigo-50 text-indigo-700'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
                 >

@@ -70,8 +70,9 @@ export class NotificationsService {
       filter.type = type;
     }
 
-    if (typeof isRead === 'boolean') {
-      filter.isRead = isRead;
+    const normalizedIsRead = this.normalizeBoolean(isRead);
+    if (typeof normalizedIsRead === 'boolean') {
+      filter.isRead = normalizedIsRead;
     }
 
     const skip = (page - 1) * limit;
@@ -168,6 +169,24 @@ export class NotificationsService {
   private async broadcastUnreadCount(userId: string): Promise<void> {
     const unread = await this.countUnread(userId);
     this.notificationsGateway.emitUnreadCount(userId, unread);
+  }
+
+  private normalizeBoolean(value: unknown): boolean | undefined {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (['true', '1', 'yes'].includes(normalized)) {
+        return true;
+      }
+      if (['false', '0', 'no'].includes(normalized)) {
+        return false;
+      }
+    }
+
+    return undefined;
   }
 
   private toResponseDto(

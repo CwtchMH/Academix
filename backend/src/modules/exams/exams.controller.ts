@@ -9,11 +9,13 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -39,6 +41,11 @@ import {
   ExamStatusTransition,
   UpdateExamStatusDto,
 } from './dto/update-exam-status.dto';
+import {
+  ExamStatusFilter,
+  ListExamsQueryDto,
+} from './dto/list-exams-query.dto';
+import { PaginationDto } from '../../common/dto/response.dto';
 
 @ApiTags('Exams')
 @ApiBearerAuth()
@@ -62,7 +69,33 @@ export class ExamsController {
   @Get('teacher/:teacherId')
   @Roles('student', 'teacher', 'admin')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Retrieve exams filtered by teacher ID' })
+  @ApiOperation({
+    summary:
+      'Retrieve exams filtered by teacher ID with search, filter, and pagination',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by exam publicId or title',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ExamStatusFilter,
+    description: 'Filter by status',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (1-indexed)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
   @ApiResponse({
     status: 200,
     description: 'Exams retrieved successfully',
@@ -74,6 +107,7 @@ export class ExamsController {
             {
               id: '652fd6a7e5a69c0012345678',
               publicId: 'E123456',
+              title: 'Midterm Exam',
               status: 'scheduled',
               startTime: '2025-11-12T01:00:00.000Z',
               endTime: '2025-11-12T02:30:00.000Z',
@@ -81,11 +115,20 @@ export class ExamsController {
             {
               id: '652fd6a7e5a69c0012345679',
               publicId: 'E123457',
+              title: 'Final Exam',
               status: 'active',
               startTime: '2025-10-25T10:00:00.000Z',
               endTime: '2025-10-25T12:00:00.000Z',
             },
           ],
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 25,
+            totalPages: 3,
+            hasNextPage: true,
+            hasPrevPage: false,
+          },
         },
         message: 'Exams retrieved successfully',
       },
@@ -93,9 +136,12 @@ export class ExamsController {
   })
   async listExamsByTeacher(
     @Param('teacherId') teacherId: string,
-  ): Promise<ApiResponseDto<{ exams: ExamSummaryDto[] }>> {
-    const exams = await this.examsService.listExamSummaries(teacherId);
-    return ResponseHelper.success({ exams }, 'Exams retrieved successfully');
+    @Query() query: ListExamsQueryDto,
+  ): Promise<
+    ApiResponseDto<{ exams: ExamSummaryDto[]; pagination: PaginationDto }>
+  > {
+    const result = await this.examsService.listExamSummaries(teacherId, query);
+    return ResponseHelper.success(result, 'Exams retrieved successfully');
   }
 
   @Post()
