@@ -366,6 +366,7 @@ export class ExamsService {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const teacherObjectId = course.teacherId as Types.ObjectId;
 
     try {
@@ -656,7 +657,7 @@ export class ExamsService {
     }
 
     // --- Validation 2: Check exam status ---
-    if (exam.status !== 'scheduled') {
+    if (exam.status !== 'active') {
       throw new BadRequestException('This exam is not active.');
     }
     if (exam.endTime < new Date()) {
@@ -718,7 +719,7 @@ export class ExamsService {
     const exam = examResult as unknown as ExamWithPopulatedQuestions;
 
     // --- Validation 2: Check Time & Status ---
-    if (exam.status !== 'scheduled') {
+    if (exam.status !== 'active') {
       throw new BadRequestException('This exam is not active.');
     }
     const now = new Date();
@@ -1130,6 +1131,7 @@ export class ExamsService {
 
     const answerMap = new Map(
       submission.answers.map((answer) => [
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         (answer.questionId as Types.ObjectId).toHexString(),
         answer.answerNumber,
       ]),

@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { ExamService } from '@/services';
 import type { JoinExamResponseDto } from '@/services/types/api.types';
-import type { AxiosError } from 'axios';
+import { isAxiosError } from 'axios';
 
 interface JoinExamModalProps {
   isOpen: boolean;
@@ -12,15 +12,21 @@ interface JoinExamModalProps {
   onJoinSuccess: (examData: JoinExamResponseDto) => void;
 }
 
-interface ErrorResponse {
-  message: string | string[];
+interface ApiErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: string;
+  };
+  timestamp: string;
 }
 
 export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess }: JoinExamModalProps) => {
   const [examCode, setExamCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // ⭐️ 4. Sử dụng usePost hook từ ExamService (đã bao gồm React Query)
+  // Cấu hình callbacks cho mutation
   const { mutate: joinExam, isPending } = ExamService.usePost<JoinExamResponseDto>(
     {
       // `url` này sẽ được nối với `EXAM_SERVICE_ENDPOINT`
@@ -28,21 +34,22 @@ export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess }: JoinExamModalP
       url: '/join',
     },
     {
-      // ⭐️ 5. Cấu hình callbacks cho mutation
+      // Cấu hình callbacks cho mutation
       onSuccess: (data) => {
         // data ở đây chính là JoinExamResponseDto
         onJoinSuccess(data);
         onClose();
       },
-      // onError: (err: AxiosError<ErrorResponse>) => {
-      //   // Xử lý lỗi từ API
-      //   const message = err.response?.data?.message || 'An unknown error occurred.';
-      //   if (Array.isArray(message)) {
-      //     setError(message.join(', '));
-      //   } else {
-      //     setError(message);
-      //   }
-      // },
+      onError: (err: unknown) => {
+        if (isAxiosError<ApiErrorResponse>(err)) {
+          // Extract message từ error.error.message
+          const message = err.response?.data?.error?.message || 'An unknown error occurred.';
+          setError(message);
+          return;
+        }
+        // Fallback for non-Axios errors
+        setError('An unexpected error occurred.');
+      },
     }
   );
 
@@ -63,8 +70,7 @@ export const JoinExamModal = ({ isOpen, onClose, onJoinSuccess }: JoinExamModalP
   }, [onClose]);
 
   const handleJoinExam = () => {
-    setError(null); // Xóa lỗi cũ
-    // Hook usePost của bạn yêu cầu data phải nằm trong object { data: ... }
+    setError(null);
     joinExam({
       data: {
         publicId: examCode,
