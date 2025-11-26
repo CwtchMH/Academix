@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { App, Modal, Spin } from 'antd'
 import { Button, Icon, Input } from '@/components/atoms'
 import { CourseCard } from '@/components/molecules'
@@ -15,11 +15,13 @@ import {
   type TeacherCourseEntity
 } from '@/services/api/course.api'
 import { useAuth } from '@/stores/auth'
+import { useDebounce } from '@/hooks'
 
 const CoursesPage: React.FC = () => {
   const { message } = App.useApp()
   const { user, getUser } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearch = useDebounce(searchTerm, 300)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdCourseInfo, setCreatedCourseInfo] = useState<{
@@ -34,26 +36,17 @@ const CoursesPage: React.FC = () => {
   const deleteCourseMutation = useDeleteCourse()
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useTeacherCourses(user?.id, {
-      enabled: Boolean(user?.id),
-      refetchOnWindowFocus: false
-    })
+    useTeacherCourses(
+      user?.id,
+      { search: debouncedSearch || undefined },
+      {
+        enabled: Boolean(user?.id),
+        refetchOnWindowFocus: false
+      }
+    )
 
   const courses = data?.data.courses ?? []
   const responseMessage = data?.message
-
-  const filteredCourses = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
-    if (!normalizedSearch) return courses
-    return courses.filter((course) => {
-      const courseName = course.courseName?.toLowerCase() ?? ''
-      const courseId = course.publicId?.toLowerCase() ?? ''
-      return (
-        courseName.includes(normalizedSearch) ||
-        courseId.includes(normalizedSearch)
-      )
-    })
-  }, [courses, searchTerm])
 
   const handleOpenModal = () => setIsModalOpen(true)
   const handleCloseModal = () => setIsModalOpen(false)
@@ -215,9 +208,9 @@ const CoursesPage: React.FC = () => {
         ) : null}
 
         {!isLoading && !isFetching && !isError ? (
-          filteredCourses.length > 0 ? (
+          courses.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredCourses.map((course) => (
+              {courses.map((course) => (
                 <CourseCard
                   key={course.id}
                   courseName={course.courseName}

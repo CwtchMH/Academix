@@ -57,6 +57,7 @@ export interface ExamEntity {
 export interface ExamSummaryEntity {
   id: string
   publicId: string
+  title?: string
   status: string
   startTime: string
   endTime: string
@@ -198,21 +199,61 @@ export const useDeleteExam = (
   })
 }
 
+// Types for search, filter, and pagination
+export type ExamStatusFilter = 'all' | 'scheduled' | 'active' | 'completed'
+
+export interface ExamsQueryParams {
+  search?: string
+  status?: ExamStatusFilter
+  page?: number
+  limit?: number
+}
+
+export interface PaginationEntity {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPrevPage: boolean
+}
+
 export interface ExamsResponse {
   success: boolean
   data: {
     exams: ExamSummaryEntity[]
+    pagination: PaginationEntity
   }
   message: string
 }
 
 export const useExams = (
   teacherId: string,
+  queryParams?: ExamsQueryParams,
   options?: Omit<UseQueryOptions<ExamsResponse>, 'queryKey' | 'queryFn'>
 ) => {
+  // Build query string from params
+  const buildQueryString = (params?: ExamsQueryParams): string => {
+    if (!params) return ''
+    const searchParams = new URLSearchParams()
+    if (params.search) searchParams.set('search', params.search)
+    if (params.status && params.status !== 'all')
+      searchParams.set('status', params.status)
+    if (params.page) searchParams.set('page', String(params.page))
+    if (params.limit) searchParams.set('limit', String(params.limit))
+    const queryString = searchParams.toString()
+    return queryString ? `?${queryString}` : ''
+  }
+
+  const queryString = buildQueryString(queryParams)
+
   return ExamService.useGet<ExamsResponse>({
-    url: `/teacher/${teacherId}`,
-    options
+    url: `/teacher/${teacherId}${queryString}`,
+    options: {
+      ...options,
+      // Include queryParams in queryKey for proper caching
+      queryKey: ['exams', 'teacher', teacherId, queryParams]
+    }
   })
 }
 

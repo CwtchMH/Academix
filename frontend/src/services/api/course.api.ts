@@ -41,6 +41,10 @@ export interface DeleteCourseResponse {
   message?: string
 }
 
+export interface TeacherCoursesQueryParams {
+  search?: string
+}
+
 /**
  * Create a new course
  * POST /courses
@@ -53,15 +57,29 @@ export const useCreateCourse = () => {
 
 export const useTeacherCourses = (
   teacherId?: string,
+  queryParams?: TeacherCoursesQueryParams,
   options?: Omit<
     UseQueryOptions<TeacherCoursesResponse>,
     'queryKey' | 'queryFn'
   >
 ) => {
+  // Build query string from params
+  const buildQueryString = (params?: TeacherCoursesQueryParams): string => {
+    if (!params) return ''
+    const searchParams = new URLSearchParams()
+    if (params.search) searchParams.set('search', params.search)
+    const queryString = searchParams.toString()
+    return queryString ? `?${queryString}` : ''
+  }
+
+  const queryString = buildQueryString(queryParams)
+
   return CourseService.useGet<TeacherCoursesResponse>({
-    url: teacherId ? `/teacher/${teacherId}` : '',
+    url: teacherId ? `/teacher/${teacherId}${queryString}` : '',
     options: {
       enabled: Boolean(teacherId),
+      // Include queryParams in queryKey for proper caching
+      queryKey: ['courses', 'teacher', teacherId, queryParams],
       ...options
     }
   })

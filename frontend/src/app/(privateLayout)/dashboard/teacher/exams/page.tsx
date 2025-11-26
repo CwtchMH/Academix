@@ -1,17 +1,19 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { App, Spin, Tooltip } from 'antd'
+import { App, Empty, Pagination, Spin, Tooltip } from 'antd'
 import { Badge, Button, Icon, Input, Select } from '@/components/atoms'
 import { useRouter } from 'next/navigation'
 import { useDeleteExam, useExams } from '@/services/api/exam.api'
 import { useAuth } from '@/stores/auth'
+import { useExamFilters, type ExamStatusFilter } from '@/hooks'
 
 type ExamStatus = 'active' | 'scheduled' | 'completed'
 
 interface ExamRow {
   id: string
   code: string
+  title?: string
   status: ExamStatus
   startTime: string
   endTime: string
@@ -23,13 +25,6 @@ const statusFilterOptions = [
   { label: 'Active', value: 'active' },
   { label: 'Scheduled', value: 'scheduled' },
   { label: 'Completed', value: 'completed' }
-]
-
-const timeframeOptions = [
-  { label: 'Timeframe: All', value: 'all' },
-  { label: 'This Week', value: 'week' },
-  { label: 'This Month', value: 'month' },
-  { label: 'This Quarter', value: 'quarter' }
 ]
 
 const statusVariantMap: Record<
@@ -74,10 +69,17 @@ const formatDateTime = (isoString: string) => {
   }
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50]
+
 export default function ExamsPage() {
   const { message, modal } = App.useApp()
   const router = useRouter()
   const { user } = useAuth()
+
+  // Use the exam filters hook for state management
+  const { filters, setSearch, setStatus, setPage, setLimit, queryParams } =
+    useExamFilters({ limit: 10 })
+
   const {
     data: examsResponse,
     isLoading,
@@ -85,7 +87,7 @@ export default function ExamsPage() {
     isError,
     error,
     refetch
-  } = useExams(user?.id ?? '', {
+  } = useExams(user?.id ?? '', queryParams, {
     enabled: Boolean(user?.id),
     refetchOnWindowFocus: false
   })
@@ -105,6 +107,7 @@ export default function ExamsPage() {
   })
 
   const exams = examsResponse?.data.exams ?? []
+  const pagination = examsResponse?.data.pagination
   const isBusy = isLoading || isFetching
 
   const examRows = useMemo<ExamRow[]>(() => {
@@ -113,6 +116,7 @@ export default function ExamsPage() {
       return {
         id: exam.id,
         code: exam.publicId,
+        title: exam.title,
         status: normalizedStatus,
         startTime: formatDateTime(exam.startTime),
         endTime: formatDateTime(exam.endTime),
@@ -124,6 +128,31 @@ export default function ExamsPage() {
   const handleCreateExam = () => {
     router.push('/dashboard/teacher/exams/create')
   }
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value)
+    },
+    [setSearch]
+  )
+
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setStatus(value as ExamStatusFilter)
+    },
+    [setStatus]
+  )
+
+  const handlePageChange = useCallback(
+    (page: number, pageSize: number) => {
+      if (pageSize !== filters.limit) {
+        setLimit(pageSize)
+      } else {
+        setPage(page)
+      }
+    },
+    [filters.limit, setLimit, setPage]
+  )
 
   const handleCopyExamCode = useCallback(
     (code: string) => {
@@ -161,6 +190,38 @@ export default function ExamsPage() {
     [deleteExamMutation, modal]
   )
 
+  const renderEmptyState = () => {
+    const hasFilters = filters.search || filters.status !== 'all'
+
+    if (hasFilters) {
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <span className="text-slate-500">
+              No exams match your search criteria. Try adjusting your filters.
+            </span>
+          }
+        />
+      )
+    }
+
+    return (
+      <Empty
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description={
+          <span className="text-slate-500">
+            No exams found. Create your first exam to see it listed here.
+          </span>
+        }
+      >
+        <Button variant="primary" onClick={handleCreateExam}>
+          Create Exam
+        </Button>
+      </Empty>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -182,35 +243,33 @@ export default function ExamsPage() {
 
       <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="space-y-6 p-6">
+          {/* Search and Filter Controls */}
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="w-full lg:max-w-md">
               <Input
-                placeholder="Search for exams..."
+                placeholder="Search by exam code or title..."
                 prefix={<Icon name="search" />}
-                onChange={(_value) => undefined}
+                value={filters.search}
+                onChange={handleSearchChange}
               />
             </div>
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
               <Select
-                value="all"
+                value={filters.status}
                 options={statusFilterOptions}
-                onChange={(_value) => undefined}
-                className="min-w-[180px]"
-              />
-              <Select
-                value="all"
-                options={timeframeOptions}
-                onChange={(_value) => undefined}
+                onChange={(value) => handleStatusChange(String(value))}
                 className="min-w-[180px]"
               />
             </div>
           </div>
 
-          {isBusy ? (
+          {/* Loading State */}
+          {isBusy && examRows.length === 0 ? (
             <div className="flex h-40 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
-              <Spin tip="Loading..."></Spin>
+              <Spin tip="Loading exams..." />
             </div>
           ) : isError ? (
+            /* Error State */
             <div className="space-y-3 rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-600">
               <p>Failed to load exams.</p>
               <button
@@ -224,31 +283,40 @@ export default function ExamsPage() {
                 <p className="text-xs text-red-500">{error.message}</p>
               ) : null}
             </div>
+          ) : examRows.length === 0 ? (
+            /* Empty State */
+            <div className="py-8">{renderEmptyState()}</div>
           ) : (
-            <div className="overflow-x-auto max-h-[calc(100vh-100px)]">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead>
-                  <tr className="text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                    <th scope="col" className="px-4 py-3">
-                      Exam Code
-                    </th>
-                    <th scope="col" className="px-4 py-3">
-                      Status
-                    </th>
-                    <th scope="col" className="px-4 py-3">
-                      Start Time
-                    </th>
-                    <th scope="col" className="px-4 py-3">
-                      End Time
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-right">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-                  {examRows.length > 0 ? (
-                    examRows.map((exam) => (
+            /* Exams Table */
+            <>
+              <div
+                className={`overflow-x-auto ${isFetching ? 'opacity-60' : ''}`}
+              >
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead>
+                    <tr className="text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                      <th scope="col" className="px-4 py-3">
+                        Exam Code
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        Title
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        Status
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        Start Time
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        End Time
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-right">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                    {examRows.map((exam) => (
                       <tr key={exam.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
@@ -267,6 +335,9 @@ export default function ExamsPage() {
                               </Button>
                             </Tooltip>
                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">
+                          {exam.title || '-'}
                         </td>
                         <td className="px-4 py-3">
                           <Badge
@@ -354,21 +425,34 @@ export default function ExamsPage() {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-4 py-6 text-center text-sm text-slate-500"
-                      >
-                        No exams found. Create your first exam to see it listed
-                        here.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {pagination && pagination.total > 0 && (
+                <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+                  <div className="text-sm text-slate-500">
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.total
+                    )}{' '}
+                    of {pagination.total} exams
+                  </div>
+                  <Pagination
+                    current={pagination.page}
+                    pageSize={pagination.limit}
+                    total={pagination.total}
+                    onChange={handlePageChange}
+                    showSizeChanger
+                    pageSizeOptions={PAGE_SIZE_OPTIONS}
+                    showQuickJumper={pagination.totalPages > 5}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

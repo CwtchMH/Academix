@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, FilterQuery } from 'mongoose';
 import { Course, CourseDocument } from '../../database/schemas/course.schema';
 import { User, UserDocument } from '../../database/schemas/user.schema';
 import {
@@ -12,6 +12,7 @@ import {
   EnrollmentDocument,
 } from '../../database/schemas/enrollment.schema';
 import { CreateBasicCourseDto, CourseBasicResponseDto } from './dto/course.dto';
+import { ListCoursesQueryDto } from './dto/list-courses-query.dto';
 import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
 
 @Injectable()
@@ -59,6 +60,7 @@ export class CoursesService {
 
   async getCoursesByTeacher(
     teacherId: string,
+    queryDto?: ListCoursesQueryDto,
   ): Promise<CourseBasicResponseDto[]> {
     const teacher = await this.userModel.findById(teacherId);
     if (!teacher) {
@@ -69,9 +71,22 @@ export class CoursesService {
       throw new ForbiddenException('Only teachers can have courses');
     }
 
-    const courses = await this.courseModel
-      .find({ teacherId: new Types.ObjectId(teacherId) })
-      .sort({ createdAt: -1 });
+    const { search = '' } = queryDto ?? {};
+
+    // Build query filter
+    const filter: FilterQuery<CourseDocument> = {
+      teacherId: new Types.ObjectId(teacherId),
+    };
+
+    // Apply search filter if provided
+    if (search) {
+      filter.$or = [
+        { courseName: { $regex: search, $options: 'i' } },
+        { publicId: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const courses = await this.courseModel.find(filter).sort({ createdAt: -1 });
 
     const courseIds = courses.map((course) => course._id);
     const enrollmentCounts = await this.enrollmentModel.aggregate<{

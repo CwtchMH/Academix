@@ -14,6 +14,12 @@ export class ExamSummaryDto {
   publicId: string;
 
   @ApiProperty({
+    description: 'Title of the exam',
+    example: 'Midterm Exam',
+  })
+  title?: string;
+
+  @ApiProperty({
     description: 'Current status of the exam',
     enum: ['scheduled', 'active', 'completed', 'cancelled'],
     example: 'active',

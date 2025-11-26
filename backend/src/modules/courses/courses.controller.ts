@@ -7,17 +7,20 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateBasicCourseDto } from './dto/course.dto';
+import { ListCoursesQueryDto } from './dto/list-courses-query.dto';
 import { ResponseHelper } from '../../common/dto/response.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 
@@ -62,6 +65,11 @@ export class CoursesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List courses created by a teacher' })
   @ApiParam({ name: 'teacherId', description: 'Teacher ID (Mongo ObjectId)' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by course name or publicId',
+  })
   @ApiResponse({
     status: 200,
     description: 'Courses retrieved successfully',
@@ -86,8 +94,14 @@ export class CoursesController {
       },
     },
   })
-  async getCoursesByTeacher(@Param('teacherId') teacherId: string) {
-    const courses = await this.coursesService.getCoursesByTeacher(teacherId);
+  async getCoursesByTeacher(
+    @Param('teacherId') teacherId: string,
+    @Query() query: ListCoursesQueryDto,
+  ) {
+    const courses = await this.coursesService.getCoursesByTeacher(
+      teacherId,
+      query,
+    );
     return ResponseHelper.success(
       { courses },
       'Courses retrieved successfully',

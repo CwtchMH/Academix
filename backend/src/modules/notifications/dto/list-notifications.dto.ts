@@ -1,13 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  Max,
-  Min,
-} from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 import {
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_TYPES,
@@ -26,22 +19,13 @@ export class ListNotificationsQueryDto {
   @IsEnum(NOTIFICATION_TYPES)
   type?: NotificationType;
 
-  @ApiPropertyOptional({ description: 'Filter by read state' })
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === undefined || value === null || value === '') {
-      return undefined;
-    }
-    if (typeof value === 'boolean') {
-      return value;
-    }
-    if (typeof value === 'string') {
-      return ['true', '1', 'yes'].includes(value.toLowerCase());
-    }
-    return Boolean(value);
+  @ApiPropertyOptional({
+    description: 'Filter by read state',
+    enum: ['true', 'false'],
   })
-  @IsBoolean()
-  isRead?: boolean;
+  @IsOptional()
+  @IsIn(['true', 'false', 'TRUE', 'FALSE', 'True', 'False'])
+  isRead?: string;
 
   @ApiPropertyOptional({ description: 'Page number', default: 1 })
   @IsOptional()
