@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { StudentDashboardExamResult } from '@/services/types'
 
 interface CompletedExamsCardProps {
@@ -60,15 +61,15 @@ export const CompletedExamsCard = ({
         </p>
       ) : (
         <ul className="mt-6 space-y-4">
-          {exams.map((result) => (
+          {exams.slice(0, 3).map((result) => (
             <li
               key={`${result.examPublicId}-${result.submittedAt}`}
               className="border border-gray-100 rounded-xl p-4"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-[var(--medium-text)]">
-                    {result.courseName}
+                  <p className="text-base font-bold text-[var(--medium-text)]">
+                    Course: {result.courseName}
                   </p>
                   <p className="text-base font-semibold text-[var(--dark-text)]">
                     {result.examTitle}
@@ -87,10 +88,18 @@ export const CompletedExamsCard = ({
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-[var(--medium-text)] mt-2">
-                Submitted {formatDate(result.submittedAt)} · Code{' '}
-                {result.examPublicId}
-              </p>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center sm:gap-4">
+                <p className="text-xs !mb-0 text-[var(--medium-text)]">
+                  Submitted {formatDate(result.submittedAt)} · Code{' '}
+                  {result.examPublicId}
+                </p>
+                <Link
+                  href={`/dashboard/student/exams/${result.examPublicId}/result?submissionId=${result.submissionId}`}
+                  className="text-sm p-2 border rounded-2xl text-blue-600 inline-block"
+                >
+                  View Details
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

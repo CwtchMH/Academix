@@ -46,6 +46,7 @@ import {
   ListExamsQueryDto,
 } from './dto/list-exams-query.dto';
 import { PaginationDto } from '../../common/dto/response.dto';
+import { create } from 'axios';
 
 type SubmissionWithExam = SubmissionDocument & {
   examId: ExamDocument & {
@@ -229,7 +230,7 @@ export class ExamsService {
         endTime: 1,
         status: 1,
       })
-      .sort({ startTime: -1 })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();

@@ -35,6 +35,7 @@ export interface CompletedExamResponse {
 }
 
 export interface StudentDashboardExamResult {
+  submissionId: string
   examPublicId: string
   examTitle: string
   courseName: string

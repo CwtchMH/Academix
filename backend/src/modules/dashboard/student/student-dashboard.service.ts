@@ -94,6 +94,7 @@ export class StudentDashboardService {
   ): Promise<StudentDashboardExamResultDto[]> {
     const rows = await this.submissionModel
       .aggregate<{
+        submissionId: string;
         examPublicId: string;
         examTitle: string;
         courseName: string;
@@ -151,6 +152,7 @@ export class StudentDashboardService {
         { $unwind: '$course' },
         {
           $project: {
+            submissionId: { $toString: '$_id' },
             examPublicId: '$exam.publicId',
             examTitle: '$exam.title',
             courseName: '$course.courseName',
@@ -163,6 +165,7 @@ export class StudentDashboardService {
       .exec();
 
     return rows.map((row) => ({
+      submissionId: row.submissionId,
       examPublicId: row.examPublicId,
       examTitle: row.examTitle,
       courseName: row.courseName,
