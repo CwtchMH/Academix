@@ -1,143 +1,145 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useRef } from 'react';
-import { AuthService } from '@/services';
-import { isAxiosError, type AxiosError } from 'axios';
+import { useState, useEffect, useRef } from 'react'
+import { AuthService } from '@/services'
+import { isAxiosError, type AxiosError } from 'axios'
+import { Icon } from '@/components/atoms/Icon/Icon'
 
 interface ErrorResponse {
-  message: string | string[];
+  message: string | string[]
 }
 
 interface FaceVerificationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void; // Prop để báo hiệu xác thực thành công
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: () => void // Prop để báo hiệu xác thực thành công
 }
 
 export const FaceVerificationModal = ({
   isOpen,
   onClose,
-  onSuccess,
+  onSuccess
 }: FaceVerificationModalProps) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isSuccess, setIsSuccess] = useState<boolean>(false)
 
   // Hook API để gọi /auth/verify-face
-  const {
-    mutate: verifyFace,
-    isPending,
-  } = AuthService.usePost<any>( // Dùng `any` cho response
+  const { mutate: verifyFace, isPending } = AuthService.usePost<any>( // Dùng `any` cho response
     {
-      url: '/verify-face',
+      url: '/verify-face'
     },
     {
       onSuccess: (data) => {
-        const success = data?.success;
-        console.log('Face verification response:', data);
+        const success = data?.success
         if (success) {
-          onClose();  
-          onSuccess(); // Báo cho trang cha là đã thành công
-          console.log('Face verified successfully.');
-          alert('Face verified successfully. You may now start your exam.');
-          setError(null);
+          setError(null)
+          setIsSuccess(true)
+          // Hiển thị thông báo thành công trong 2 giây rồi đóng modal
+          setTimeout(() => {
+            setIsSuccess(false)
+            onClose()
+            onSuccess() // Báo cho trang cha là đã thành công
+          }, 5000)
         } else {
           // Thất bại -> giữ modal mở, hiển thị lỗi và cho phép thử lại
-          const message = data?.message || 'Face verification failed.';
-          const msg = Array.isArray(message) ? message.join(', ') : message;
-          setError(msg);
+          const message = data?.message || 'Face verification failed.'
+          const msg = Array.isArray(message) ? message.join(', ') : message
+          setError(msg)
           // Optionally show a non-blocking UI toast instead of alert
-          console.warn('Face verification failed:', msg);
+          console.warn('Face verification failed:', msg)
           // DON'T call onClose() or onSuccess() so user can retry
         }
       },
       onError: (err: unknown) => {
         if (isAxiosError(err)) {
-          const message = err.response?.data?.message || 'Face verification failed.';
-          setError(Array.isArray(message) ? message.join(', ') : message);
-          return;
+          const message =
+            err.response?.data?.message || 'Face verification failed.'
+          setError(Array.isArray(message) ? message.join(', ') : message)
+          return
         }
         // generic fallback for non-Axios errors
         const msg =
           err && typeof err === 'object' && 'message' in err
             ? String((err as any).message)
-            : 'Face verification failed.';
-        setError(msg);
-      },
-    },
-  );
+            : 'Face verification failed.'
+        setError(msg)
+      }
+    }
+  )
 
   // Effect để Bật/Tắt webcam
   useEffect(() => {
     const startStream = async () => {
-      setError(null);
+      setError(null)
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 480, height: 360 }, // Yêu cầu kích thước nhỏ
-        });
-        setStream(mediaStream);
+          video: { width: 480, height: 360 } // Yêu cầu kích thước nhỏ
+        })
+        setStream(mediaStream)
         if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
+          videoRef.current.srcObject = mediaStream
         }
       } catch (err) {
-        console.error('Error accessing webcam:', err);
+        console.error('Error accessing webcam:', err)
         setError(
-          'Could not access webcam. Please check permissions and try again.',
-        );
+          'Could not access webcam. Please check permissions and try again.'
+        )
       }
-    };
+    }
 
     const stopStream = () => {
       if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        setStream(null);
+        stream.getTracks().forEach((track) => track.stop())
+        setStream(null)
       }
-    };
+    }
 
     if (isOpen) {
-      startStream();
+      startStream()
     } else {
-      stopStream();
+      stopStream()
     }
 
     // Cleanup khi component unmount
     return () => {
-      stopStream();
-    };
-  }, [isOpen]); // Chỉ chạy khi modal đóng/mở
+      stopStream()
+    }
+  }, [isOpen]) // Chỉ chạy khi modal đóng/mở
 
   // Hàm chụp ảnh và gọi API
   const handleVerifyFace = () => {
     if (!videoRef.current || !canvasRef.current) {
-      setError('Component is not ready.');
-      return;
+      setError('Component is not ready.')
+      return
     }
 
-    setError(null);
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+    setError(null)
+    const video = videoRef.current
+    const canvas = canvasRef.current
 
     // Set kích thước canvas = kích thước video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
 
     // Vẽ khung hình hiện tại từ video lên canvas
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext('2d')
     if (context) {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
     }
 
     // Convert canvas sang base64 (định dạng Gemini có thể đọc)
-    const base64Image = canvas.toDataURL('image/jpeg', 0.9); // 90% quality
+    const base64Image = canvas.toDataURL('image/jpeg', 0.9) // 90% quality
 
     // Gọi API
     verifyFace({
       data: {
-        webcamImage: base64Image,
-      },
-    });
-  };
+        webcamImage: base64Image
+      }
+    })
+  }
 
   return (
     <>
@@ -154,7 +156,9 @@ export const FaceVerificationModal = ({
         role="dialog"
         aria-modal="true"
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all ${
-          isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+          isOpen
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
         <div className="bg-white rounded-lg shadow-xl w-full max-w-lg m-4 transform">
@@ -168,11 +172,16 @@ export const FaceVerificationModal = ({
                 className="text-[var(--medium-text)] hover:text-[var(--dark-text)] p-1 rounded-full hover:bg-gray-100"
                 disabled={isPending}
               >
-                <span className="material-symbols-outlined">close</span>
+                <Icon
+                  name="close"
+                  className="text-[var(--medium-text)]"
+                  size="medium"
+                />
               </button>
             </div>
             <p className="mt-2 text-base text-[var(--medium-text)]">
-              Please position your face in the center of the camera and press verify.
+              Please position your face in the center of the camera and press
+              verify.
             </p>
 
             {/* Video Feed */}
@@ -189,8 +198,46 @@ export const FaceVerificationModal = ({
             {/* Canvas ẩn để chụp ảnh */}
             <canvas ref={canvasRef} className="hidden" />
 
+            {/* Hiển thị thông báo thành công */}
+            {isSuccess && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Icon name="check" className="text-green-600" size="medium" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-green-800">
+                    Verification Successful!
+                  </p>
+                  <p className="text-xs text-green-600">
+                    Your face has been verified. Redirecting to exam...
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Hiển thị lỗi */}
-            {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Icon name="failed" className="text-red-600" size="medium" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-800">
+                    Verification Failed
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">{error}</p>
+                  <p className="text-xs text-red-500 mt-2">
+                    Please ensure your face is clearly visible and try again.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setError(null)}
+                  className="flex-shrink-0 text-red-400 hover:text-red-600 p-1 rounded-full hover:bg-red-100 transition-colors"
+                >
+                  <Icon name="close" className="text-red-400" size="medium" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Footer Buttons */}
@@ -198,14 +245,14 @@ export const FaceVerificationModal = ({
             <button
               onClick={onClose}
               className="btn-secondary px-6 py-2 text-sm font-semibold rounded-md shadow-sm"
-              disabled={isPending}
+              disabled={isPending || isSuccess}
             >
               Cancel
             </button>
             <button
               onClick={handleVerifyFace}
               className="btn-primary px-6 py-2 text-sm font-semibold rounded-md shadow-sm disabled:opacity-50"
-              disabled={isPending || !stream} // Tắt nút khi đang load hoặc chưa có stream
+              disabled={isPending || !stream || isSuccess} // Tắt nút khi đang load, chưa có stream hoặc đã thành công
             >
               {isPending ? 'Verifying...' : 'Verify My Face'}
             </button>
@@ -213,5 +260,5 @@ export const FaceVerificationModal = ({
         </div>
       </div>
     </>
-  );
-};
+  )
+}

@@ -377,31 +377,19 @@ export default function ExamsPage() {
                             >
                               View Results
                             </Button>
-                            <Tooltip
-                              title={
-                                exam.isEditable
-                                  ? undefined
-                                  : 'Only scheduled exams can be edited'
-                              }
+
+                            <Button
+                              size="small"
+                              variant="outline"
+                              className="!px-3"
+                              onClick={() => {
+                                router.push(
+                                  `/dashboard/teacher/exams/create?examId=${exam.id}`
+                                )
+                              }}
                             >
-                              <Button
-                                size="small"
-                                variant="outline"
-                                className="!px-3"
-                                disabled={!exam.isEditable}
-                                aria-disabled={!exam.isEditable}
-                                onClick={() => {
-                                  if (!exam.isEditable) {
-                                    return
-                                  }
-                                  router.push(
-                                    `/dashboard/teacher/exams/create?examId=${exam.id}`
-                                  )
-                                }}
-                              >
-                                Edit
-                              </Button>
-                            </Tooltip>
+                              Edit
+                            </Button>
                             <Tooltip title="Delete exam">
                               <Button
                                 size="small"

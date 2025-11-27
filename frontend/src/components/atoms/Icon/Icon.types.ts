@@ -15,6 +15,9 @@ export interface IconProps {
     | 'courses'
     | 'notifications'
     | 'arrow-left'
+    | 'close'
+    | 'failed'
+    | 'check'
   className?: string
   size?: 'small' | 'medium' | 'large'
 }
