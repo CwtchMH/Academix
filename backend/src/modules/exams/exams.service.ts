@@ -609,21 +609,6 @@ export class ExamsService {
       );
     }
 
-    // Check if exam can be updated - only allow if not started yet or cancelled
-    const now = new Date();
-    const hasStarted = now >= existingExam.startTime;
-    const isCompleted = existingExam.status === 'completed';
-
-    if (isCompleted) {
-      throw new BadRequestException('Cannot update completed exams');
-    }
-
-    if (hasStarted && existingExam.status !== 'cancelled') {
-      throw new BadRequestException(
-        'Cannot update exam that has already started',
-      );
-    }
-
     const teacherObjectId = new Types.ObjectId(teacher.id);
     const normalizedQuestions = updateExamDto.questions.map(
       (questionDto, index) =>

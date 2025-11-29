@@ -6,6 +6,7 @@ export { MainLayout } from './MainLayout'
 export { FinalizeExamModal } from './FinalizeExamModal'
 export { CreateCourseModal } from './CreateCourseModal'
 export { ExamResultDetail } from './ExamResultDetail'
+export { ExamQuestionsList } from './ExamQuestionsList'
 
 export type { LoginCardProps } from './LoginCard'
 export type { RegisterCardProps } from './RegisterCard'
@@ -21,3 +22,4 @@ export type {
   CreateCourseFormValues
 } from './CreateCourseModal'
 export type { ExamResultDetailProps } from './ExamResultDetail'
+export type { ExamQuestionsListProps } from './ExamQuestionsList'
