@@ -3,6 +3,7 @@
 import { App, Empty, Spin } from 'antd'
 import { useParams, useRouter } from 'next/navigation'
 import { Badge, Button, Icon } from '@/components/atoms'
+import { ExamQuestionsList } from '@/components/organisms'
 import { useDeleteExam, useGetExam } from '@/services/api/exam.api'
 import { useMemo } from 'react'
 
@@ -147,7 +148,7 @@ export default function TeacherExamDetailPage() {
     <div className="space-y-6">
       <button
         type="button"
-        className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+        className="flex items-center gap-2 !mb-2 text-sm font-medium text-slate-600 hover:text-slate-900"
         onClick={handleNavigateBack}
       >
         <Icon name="arrow-left" size="small" />
@@ -252,6 +253,8 @@ export default function TeacherExamDetailPage() {
           </Button>
         </div>
       </section>
+
+      <ExamQuestionsList questions={exam.questions ?? []} />
     </div>
   )
 }
