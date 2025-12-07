@@ -137,8 +137,8 @@ export default function ExamsPage() {
   )
 
   const handleStatusChange = useCallback(
-    (value: string) => {
-      setStatus(value as ExamStatusFilter)
+    (value: string | number | undefined) => {
+      setStatus((value ?? 'all') as ExamStatusFilter)
     },
     [setStatus]
   )
@@ -257,7 +257,7 @@ export default function ExamsPage() {
               <Select
                 value={filters.status}
                 options={statusFilterOptions}
-                onChange={(value) => handleStatusChange(String(value))}
+                onChange={handleStatusChange}
                 className="min-w-[180px]"
               />
             </div>

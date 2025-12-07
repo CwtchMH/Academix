@@ -9,7 +9,8 @@ const Select: React.FC<SelectProps> = ({
   options,
   disabled = false,
   className = '',
-  required = false
+  required = false,
+  allowClear = true
 }) => {
   return (
     <AntSelect
@@ -21,7 +22,7 @@ const Select: React.FC<SelectProps> = ({
       disabled={disabled}
       className={`w-full !h-10 ${className}`}
       size="large"
-      allowClear // ← Cho phép clear selection
+      allowClear={allowClear}
     />
   )
 }
