@@ -73,6 +73,18 @@ const TeacherCertificatesPage = () => {
       responsive: ["lg"],
     },
     {
+      title: "Token Id",
+      dataIndex: ["tokenId"],
+      key: "tokenId",
+      render: (tokenId: string) => {
+        return (
+          <span className="font-medium text-[14px] leading-[20px] text-gray-900">
+            {tokenId || "-"}
+          </span>
+        );
+      },
+    },
+    {
       title: "Status",
       dataIndex: "status",
       key: "status",

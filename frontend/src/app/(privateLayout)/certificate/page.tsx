@@ -294,6 +294,19 @@ const certificate = () => {
               ),
             },
             {
+              title: "Token Id",
+              dataIndex: ["tokenId"],
+              key: "tokenId",
+              width: "15%",
+              render: (tokenId: string) => {
+                return (
+                  <span className="font-medium text-[14px] leading-[20px] text-gray-900">
+                    {tokenId || "-"}
+                  </span>
+                );
+              },
+            },
+            {
               title: "Score",
               dataIndex: ["submission", "score"],
               key: "score",

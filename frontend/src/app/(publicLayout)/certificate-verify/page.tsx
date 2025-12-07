@@ -10,7 +10,9 @@ import {
   ExportOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  LoginOutlined,
 } from "@ant-design/icons";
+import Link from "next/link";
 
 interface CertificateVerifyResponse {
   success: boolean;
@@ -172,6 +174,16 @@ const certificateVerify = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header Section */}
         <div className="text-center mb-8">
+          {/* Login Link */}
+          <div className="flex justify-end mb-4">
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 bg-white text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-blue-200"
+            >
+              <LoginOutlined className="text-lg" />
+              <span>Login</span>
+            </Link>
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
             Academix
           </h1>
@@ -415,29 +427,6 @@ const certificateVerify = () => {
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:text-blue-700 transition-colors flex-shrink-0 mt-1"
                               title="View Image"
-                            >
-                              <ExportOutlined className="text-lg" />
-                            </a>
-                          </div>
-                        </div>
-                      </Col>
-                    )}
-                    {certificate.ipfsImage && !certificate.imageUrl && (
-                      <Col xs={24}>
-                        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                          <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">
-                            IPFS Image
-                          </p>
-                          <div className="flex items-start gap-2">
-                            <p className="text-gray-900 text-sm font-mono break-all flex-1">
-                              {certificate.ipfsImage}
-                            </p>
-                            <a
-                              href={getCertificateImageUrl(certificate) || "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-700 transition-colors flex-shrink-0 mt-1"
-                              title="View on IPFS"
                             >
                               <ExportOutlined className="text-lg" />
                             </a>
