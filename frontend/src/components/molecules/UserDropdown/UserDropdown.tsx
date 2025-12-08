@@ -26,7 +26,7 @@ export const UserDropdown: React.FC = () => {
   const menuItems: MenuProps["items"] = [
     {
       key: "profile",
-      label: "Trang cá nhân",
+      label: "Profile",
       icon: <UserOutlined />,
       onClick: handleProfile,
     },
@@ -35,7 +35,7 @@ export const UserDropdown: React.FC = () => {
     },
     {
       key: "logout",
-      label: "Đăng xuất",
+      label: "Logout",
       icon: <LogoutOutlined />,
       onClick: handleLogout,
       danger: true,

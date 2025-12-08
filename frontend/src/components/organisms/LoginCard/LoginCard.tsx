@@ -1,13 +1,16 @@
-import { LoginForm } from '@/components/molecules'
-import { Link } from '@/components/atoms'
-import { LoginCardProps } from './LoginCard.types'
-import Image from 'next/image'
+"use client";
+
+import { LoginForm } from "@/components/molecules";
+import { Link } from "@/components/atoms";
+import { LoginCardProps } from "./LoginCard.types";
+import Image from "next/image";
+import { SafetyCertificateOutlined } from "@ant-design/icons";
 
 const LoginCard: React.FC<LoginCardProps> = ({
   onSubmit,
   loading = false,
   error,
-  className = ''
+  className = "",
 }) => {
   return (
     <div
@@ -35,16 +38,25 @@ const LoginCard: React.FC<LoginCardProps> = ({
       <LoginForm onSubmit={onSubmit} loading={loading} error={error} />
 
       {/* Footer */}
-      <div className="mt-6 text-center">
+      <div className="mt-6 space-y-3 text-center">
         <p className="text-gray-600 text-sm lg:text-base">
-          Don&apos;t have an account?{' '}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium">
             Create one
           </Link>
         </p>
+        <div className="pt-3 border-t border-gray-200">
+          <Link
+            href="/certificate-verify"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm lg:text-base transition-colors duration-200"
+          >
+            <SafetyCertificateOutlined />
+            <span>Verify Certificate</span>
+          </Link>
+        </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LoginCard
+export default LoginCard;
