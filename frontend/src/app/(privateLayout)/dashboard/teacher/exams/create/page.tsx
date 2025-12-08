@@ -1,95 +1,95 @@
-'use client'
+"use client";
 
-import React, { useEffect, useMemo, useState } from 'react'
-import dayjs from 'dayjs'
-import { App, Form, Modal, Radio, Spin } from 'antd'
+import React, { useEffect, useMemo, useState } from "react";
+import dayjs from "dayjs";
+import { App, Form, Modal, Radio, Spin } from "antd";
 import {
   Button,
   Icon,
   Input,
   Textarea,
-  type SelectOption
-} from '@/components/atoms'
-import { QuestionPreviewItem } from '@/components/molecules'
+  type SelectOption,
+} from "@/components/atoms";
+import { QuestionPreviewItem } from "@/components/molecules";
 import {
   FinalizeExamModal,
-  type FinalizeExamFormValues
-} from '@/components/organisms'
+  type FinalizeExamFormValues,
+} from "@/components/organisms";
 import {
   useCreateExam,
   useGetExam,
   useUpdateExam,
   type CreateExamRequest,
-  type ExamEntity
-} from '@/services/api/exam.api'
-import { useTeacherCourses } from '@/services/api/course.api'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '@/stores/auth'
-import { parseApiError } from '@/services/utils/auth.utils'
+  type ExamEntity,
+} from "@/services/api/exam.api";
+import { useTeacherCourses } from "@/services/api/course.api";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/stores/auth";
+import { parseApiError } from "@/services/utils/auth.utils";
 
 interface AnswerChoiceDraft {
-  id: string
-  text: string
+  id: string;
+  text: string;
 }
 
 interface ExamQuestion {
-  id: string
-  prompt: string
-  choices: AnswerChoiceDraft[]
-  correctChoiceId?: string | null
+  id: string;
+  prompt: string;
+  choices: AnswerChoiceDraft[];
+  correctChoiceId?: string | null;
 }
 
 const generateChoiceId = (index: number) => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return `choice-${crypto.randomUUID()}`
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `choice-${crypto.randomUUID()}`;
   }
-  return `choice-${Date.now()}-${index}`
-}
+  return `choice-${Date.now()}-${index}`;
+};
 
 const createEmptyChoices = (count = 4): AnswerChoiceDraft[] => {
   return Array.from({ length: count }).map((_, index) => ({
     id: generateChoiceId(index),
-    text: ''
-  }))
-}
+    text: "",
+  }));
+};
 
 const createExistingChoiceId = (questionId: string, index: number) => {
-  return `${questionId}-choice-${index}`
-}
+  return `${questionId}-choice-${index}`;
+};
 
 const padChoices = (choices: AnswerChoiceDraft[], desiredLength = 4) => {
   const padded = choices.map((choice, index) => ({
     id: choice.id ?? generateChoiceId(index),
-    text: choice.text ?? ''
-  }))
+    text: choice.text ?? "",
+  }));
 
   while (padded.length < desiredLength) {
-    padded.push({ id: generateChoiceId(padded.length), text: '' })
+    padded.push({ id: generateChoiceId(padded.length), text: "" });
   }
 
-  return padded.slice(0, desiredLength)
-}
+  return padded.slice(0, desiredLength);
+};
 
-const initialQuestions: ExamQuestion[] = []
+const initialQuestions: ExamQuestion[] = [];
 
 const mapExamQuestionToDraft = (
-  question: ExamEntity['questions'][number]
+  question: ExamEntity["questions"][number]
 ): ExamQuestion => {
   const choices = question.answer.map((choice, index) => ({
     id: createExistingChoiceId(question.id, index),
-    text: choice.content ?? ''
-  }))
+    text: choice.content ?? "",
+  }));
 
-  const correctChoiceIndex = Math.max(0, question.answerQuestion - 1)
-  const correctChoice = choices[correctChoiceIndex]
+  const correctChoiceIndex = Math.max(0, question.answerQuestion - 1);
+  const correctChoice = choices[correctChoiceIndex];
 
   return {
     id: question.id,
-    prompt: question.content ?? '',
+    prompt: question.content ?? "",
     choices,
-    correctChoiceId: correctChoice?.id ?? null
-  }
-}
+    correctChoiceId: correctChoice?.id ?? null,
+  };
+};
 
 const mapExamToFinalizeValues = (exam: ExamEntity): FinalizeExamFormValues => {
   return {
@@ -97,136 +97,136 @@ const mapExamToFinalizeValues = (exam: ExamEntity): FinalizeExamFormValues => {
     durationMinutes: exam.durationMinutes,
     rateScore: exam.rateScore,
     startTime: exam.startTime ? dayjs(exam.startTime) : null,
-    endTime: exam.endTime ? dayjs(exam.endTime) : null
-  }
-}
+    endTime: exam.endTime ? dayjs(exam.endTime) : null,
+  };
+};
 
 export default function CreateTeacherExamPage() {
-  const { message } = App.useApp()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const examId = searchParams?.get('examId') ?? undefined
-  const { user, getUser } = useAuth()
-  const createExamMutation = useCreateExam()
-  const updateExamMutation = useUpdateExam()
-  const isEditing = Boolean(examId)
-  const shouldLoadExam = Boolean(examId)
+  const { message } = App.useApp();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const examId = searchParams?.get("examId") ?? undefined;
+  const { user, getUser } = useAuth();
+  const createExamMutation = useCreateExam();
+  const updateExamMutation = useUpdateExam();
+  const isEditing = Boolean(examId);
+  const shouldLoadExam = Boolean(examId);
   const {
     data: examDetailResponse,
     isLoading: isLoadingExam,
     isFetching: isFetchingExam,
     isError: isExamError,
-    error: examError
-  } = useGetExam(examId ?? '', {
+    error: examError,
+  } = useGetExam(examId ?? "", {
     enabled: shouldLoadExam,
     refetchOnWindowFocus: false,
-    retry: false
-  })
+    retry: false,
+  });
   const { data: teacherCoursesData } = useTeacherCourses(user?.id, {
     enabled: Boolean(user?.id),
-    refetchOnWindowFocus: false
-  })
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
     if (!user?.id) {
-      void getUser()
+      void getUser();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  const [examTitle, setExamTitle] = useState('')
+  }, []);
+  const [examTitle, setExamTitle] = useState("");
   const [choiceTemplate, setChoiceTemplate] = useState<AnswerChoiceDraft[]>(
     createEmptyChoices()
-  )
-  const [correctChoiceId, setCorrectChoiceId] = useState<string | null>(null)
-  const [questions, setQuestions] = useState<ExamQuestion[]>(initialQuestions)
+  );
+  const [correctChoiceId, setCorrectChoiceId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[]>(initialQuestions);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
     null
-  )
+  );
   const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(
     null
-  )
-  const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false)
+  );
+  const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
   const [questionPendingDeletion, setQuestionPendingDeletion] =
-    useState<ExamQuestion | null>(null)
+    useState<ExamQuestion | null>(null);
   const [finalizeInitialValues, setFinalizeInitialValues] =
-    useState<FinalizeExamFormValues>()
+    useState<FinalizeExamFormValues>();
   const [form] = Form.useForm<{
-    prompt: string
-    choices: { text: string }[]
-    correctChoiceId?: string
-  }>()
+    prompt: string;
+    choices: { text: string }[];
+    correctChoiceId?: string;
+  }>();
 
-  const totalQuestions = useMemo(() => questions.length, [questions])
+  const totalQuestions = useMemo(() => questions.length, [questions]);
 
   const courseOptions = useMemo<SelectOption[]>(() => {
-    const courses = teacherCoursesData?.data.courses ?? []
+    const courses = teacherCoursesData?.data.courses ?? [];
     return courses.map((course) => ({
       label: course.courseName ?? course.id,
-      value: course.id
-    }))
-  }, [teacherCoursesData])
+      value: course.id,
+    }));
+  }, [teacherCoursesData]);
 
-  const getQuestionPayloads = (): CreateExamRequest['questions'] => {
+  const getQuestionPayloads = (): CreateExamRequest["questions"] => {
     if (questions.length === 0) {
-      throw new Error('Please add at least one question before saving.')
+      throw new Error("Please add at least one question before saving.");
     }
 
     return questions.map((question, index) => {
-      const trimmedPrompt = question.prompt.trim()
+      const trimmedPrompt = question.prompt.trim();
 
       if (!trimmedPrompt) {
-        throw new Error(`Question ${index + 1} is missing content.`)
+        throw new Error(`Question ${index + 1} is missing content.`);
       }
 
       const trimmedChoices = question.choices
         .map((choice) => ({
           ...choice,
-          text: choice.text.trim()
+          text: choice.text.trim(),
         }))
-        .filter((choice) => choice.text.length > 0)
+        .filter((choice) => choice.text.length > 0);
 
       if (trimmedChoices.length < 2) {
         throw new Error(
           `Question ${index + 1} must have at least two answer choices.`
-        )
+        );
       }
 
       const correctIndex = trimmedChoices.findIndex(
         (choice) => choice.id === question.correctChoiceId
-      )
+      );
 
       if (correctIndex === -1) {
         throw new Error(
           `Please mark the correct answer for question ${index + 1}.`
-        )
+        );
       }
 
       return {
         content: trimmedPrompt,
         answerQuestion: correctIndex + 1,
-        answer: trimmedChoices.map((choice) => ({ content: choice.text }))
-      }
-    })
-  }
+        answer: trimmedChoices.map((choice) => ({ content: choice.text })),
+      };
+    });
+  };
 
-  const getTrimmedTitle = () => examTitle.trim()
+  const getTrimmedTitle = () => examTitle.trim();
 
   const buildExamRequest = (
     finalizeValues: FinalizeExamFormValues
   ): CreateExamRequest => {
-    const trimmedTitle = getTrimmedTitle()
+    const trimmedTitle = getTrimmedTitle();
 
     if (!trimmedTitle) {
-      throw new Error('Please enter an exam title before saving.')
+      throw new Error("Please enter an exam title before saving.");
     }
 
-    const questionPayloads = getQuestionPayloads()
+    const questionPayloads = getQuestionPayloads();
 
     const { courseId, durationMinutes, startTime, endTime, rateScore } =
-      finalizeValues
+      finalizeValues;
 
     if (!courseId) {
-      throw new Error('Please select a course for this exam.')
+      throw new Error("Please select a course for this exam.");
     }
 
     if (
@@ -234,23 +234,23 @@ export default function CreateTeacherExamPage() {
       Number.isNaN(durationMinutes) ||
       durationMinutes <= 0
     ) {
-      throw new Error('Please provide a valid exam duration.')
+      throw new Error("Please provide a valid exam duration.");
     }
 
     if (!startTime) {
-      throw new Error('Please provide a start time.')
+      throw new Error("Please provide a start time.");
     }
 
     if (!endTime) {
-      throw new Error('Please provide an end time.')
+      throw new Error("Please provide an end time.");
     }
 
     if (startTime.isAfter(endTime)) {
-      throw new Error('End time must be after start time.')
+      throw new Error("End time must be after start time.");
     }
 
     if (rateScore === undefined || Number.isNaN(rateScore)) {
-      throw new Error('Please provide a passing score.')
+      throw new Error("Please provide a passing score.");
     }
 
     return {
@@ -258,103 +258,103 @@ export default function CreateTeacherExamPage() {
       durationMinutes,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
-      status: 'scheduled',
+      status: "scheduled",
       courseId,
       rateScore,
-      questions: questionPayloads
-    }
-  }
+      questions: questionPayloads,
+    };
+  };
 
   const applyBuilderValues = (
     choices: AnswerChoiceDraft[],
-    prompt = '',
+    prompt = "",
     correctChoiceId?: string | null
   ) => {
-    const paddedChoices = padChoices(choices)
+    const paddedChoices = padChoices(choices);
     const sanitizedCorrectId =
       correctChoiceId &&
       paddedChoices.some((choice) => choice.id === correctChoiceId)
         ? correctChoiceId
-        : null
+        : null;
 
-    setChoiceTemplate(paddedChoices)
-    setCorrectChoiceId(sanitizedCorrectId)
+    setChoiceTemplate(paddedChoices);
+    setCorrectChoiceId(sanitizedCorrectId);
     form.setFieldsValue({
-      prompt
-    })
-  }
+      prompt,
+    });
+  };
 
   const resetBuilder = () => {
-    setEditingQuestionId(null)
-    form.resetFields(['prompt'])
-    applyBuilderValues(createEmptyChoices())
-  }
+    setEditingQuestionId(null);
+    form.resetFields(["prompt"]);
+    applyBuilderValues(createEmptyChoices());
+  };
 
   useEffect(() => {
-    applyBuilderValues(choiceTemplate)
+    applyBuilderValues(choiceTemplate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (!shouldLoadExam) {
-      return
+      return;
     }
 
     if (isExamError) {
       message.error(
-        parseApiError(examError) ?? 'Unable to load exam for editing.'
-      )
-      router.replace('/dashboard/teacher')
-      return
+        parseApiError(examError) ?? "Unable to load exam for editing."
+      );
+      router.replace("/dashboard/teacher");
+      return;
     }
 
-    const exam = examDetailResponse?.data.exam
+    const exam = examDetailResponse?.data.exam;
 
     if (!exam) {
-      return
+      return;
     }
 
-    setExamTitle(exam.title ?? '')
-    setQuestions(exam.questions.map(mapExamQuestionToDraft))
-    setFinalizeInitialValues(mapExamToFinalizeValues(exam))
-    setEditingQuestionId(null)
-    setExpandedQuestionId(null)
-    applyBuilderValues(createEmptyChoices())
-  }, [examDetailResponse, isExamError, message, router, shouldLoadExam])
+    setExamTitle(exam.title ?? "");
+    setQuestions(exam.questions.map(mapExamQuestionToDraft));
+    setFinalizeInitialValues(mapExamToFinalizeValues(exam));
+    setEditingQuestionId(null);
+    setExpandedQuestionId(null);
+    applyBuilderValues(createEmptyChoices());
+  }, [examDetailResponse, isExamError, message, router, shouldLoadExam]);
 
   const handleChoiceTextChange = (index: number, value: string) => {
     setChoiceTemplate((prev) => {
-      const updated = [...prev]
-      const target = updated[index]
+      const updated = [...prev];
+      const target = updated[index];
 
       if (!target) {
-        return updated
+        return updated;
       }
 
-      updated[index] = { ...target, text: value }
-      return updated
-    })
-  }
+      updated[index] = { ...target, text: value };
+      return updated;
+    });
+  };
 
   const handleSelectCorrectChoice = (value: string) => {
-    setCorrectChoiceId(value)
-  }
+    setCorrectChoiceId(value);
+  };
 
   const handleAddQuestion = async (values: { prompt: string }) => {
     try {
-      const trimmedPrompt = values.prompt.trim()
+      const trimmedPrompt = values.prompt.trim();
       const mergedChoices = choiceTemplate.map((choice) => ({
         id: choice.id,
-        text: choice.text.trim()
-      }))
+        text: choice.text.trim(),
+      }));
 
       const choicePayload = mergedChoices.filter(
         (choice) => choice.text.length > 0
-      )
+      );
 
       if (choicePayload.length < 2) {
-        message.error('Please provide at least two answer choices.')
-        return
+        message.error("Please provide at least two answer choices.");
+        return;
       }
 
       if (
@@ -362,179 +362,179 @@ export default function CreateTeacherExamPage() {
         !choicePayload.some((choice) => choice.id === correctChoiceId)
       ) {
         message.error(
-          'Please select the correct answer from the provided choices.'
-        )
-        return
+          "Please select the correct answer from the provided choices."
+        );
+        return;
       }
 
       const payload: ExamQuestion = {
         id: editingQuestionId ?? `question-${Date.now()}`,
         prompt: trimmedPrompt,
         choices: choicePayload,
-        correctChoiceId
-      }
+        correctChoiceId,
+      };
 
       setQuestions((prev) => {
         if (editingQuestionId) {
           return prev.map((question) =>
             question.id === editingQuestionId ? payload : question
-          )
+          );
         }
-        return [...prev, payload]
-      })
+        return [...prev, payload];
+      });
 
-      resetBuilder()
+      resetBuilder();
     } catch (errorInfo) {
-      void errorInfo
+      void errorInfo;
     }
-  }
+  };
 
   const applyQuestionForEditing = (question: ExamQuestion) => {
-    setEditingQuestionId(question.id)
-    setExpandedQuestionId(question.id)
+    setEditingQuestionId(question.id);
+    setExpandedQuestionId(question.id);
     applyBuilderValues(
       question.choices,
       question.prompt,
       question.correctChoiceId
-    )
-  }
+    );
+  };
 
   const handleEditQuestion = (question: ExamQuestion) => {
-    applyQuestionForEditing(question)
-  }
+    applyQuestionForEditing(question);
+  };
 
   const handleRequestDeleteQuestion = (questionId: string) => {
     const targetQuestion = questions.find(
       (question) => question.id === questionId
-    )
+    );
     if (!targetQuestion) {
-      return
+      return;
     }
-    setQuestionPendingDeletion(targetQuestion)
-  }
+    setQuestionPendingDeletion(targetQuestion);
+  };
 
   const handleConfirmDeleteQuestion = () => {
     if (!questionPendingDeletion) {
-      return
+      return;
     }
 
-    const questionId = questionPendingDeletion.id
+    const questionId = questionPendingDeletion.id;
 
     setQuestions((prev) =>
       prev.filter((question) => question.id !== questionId)
-    )
+    );
 
     if (editingQuestionId === questionId) {
-      resetBuilder()
+      resetBuilder();
     }
 
-    setExpandedQuestionId((prev) => (prev === questionId ? null : prev))
+    setExpandedQuestionId((prev) => (prev === questionId ? null : prev));
 
-    setQuestionPendingDeletion(null)
-    message.success('Question removed from preview')
-  }
+    setQuestionPendingDeletion(null);
+    message.success("Question removed from preview");
+  };
 
   const handleCancelDeleteQuestion = () => {
-    setQuestionPendingDeletion(null)
-  }
+    setQuestionPendingDeletion(null);
+  };
 
   const handleToggleExpand = (questionId: string) => {
-    setExpandedQuestionId((prev) => (prev === questionId ? null : questionId))
-  }
+    setExpandedQuestionId((prev) => (prev === questionId ? null : questionId));
+  };
 
   const handleGenerateAi = () => {
     // Future: replace with actual AI generation logic
-    console.log('AI generation not implemented yet')
-  }
+    console.log("AI generation not implemented yet");
+  };
 
   const handleSaveExamClick = () => {
     try {
-      const trimmedTitle = getTrimmedTitle()
+      const trimmedTitle = getTrimmedTitle();
 
       if (!trimmedTitle) {
-        throw new Error('Please enter an exam title before saving.')
+        throw new Error("Please enter an exam title before saving.");
       }
 
-      getQuestionPayloads()
-      setIsFinalizeModalOpen(true)
+      getQuestionPayloads();
+      setIsFinalizeModalOpen(true);
     } catch (error) {
       if (error instanceof Error) {
-        message.error(error.message)
+        message.error(error.message);
       } else {
-        message.error('Unable to proceed. Please review the exam details.')
+        message.error("Unable to proceed. Please review the exam details.");
       }
     }
-  }
+  };
 
   const handleFinalizeExamSubmit = async (
     finalizeValues: FinalizeExamFormValues
   ) => {
     try {
-      const requestPayload = buildExamRequest(finalizeValues)
+      const requestPayload = buildExamRequest(finalizeValues);
 
       if (isEditing && examId) {
         const response = await updateExamMutation.mutateAsync({
           examId,
-          data: requestPayload
-        })
+          data: requestPayload,
+        });
 
         if (!response.success) {
-          message.error(response.message ?? 'Failed to update exam')
-          return
+          message.error(response.message ?? "Failed to update exam");
+          return;
         }
 
-        message.success(response.message ?? 'Exam updated successfully')
-        setIsFinalizeModalOpen(false)
-        void router.push('/dashboard/teacher')
-        return
+        message.success(response.message ?? "Exam updated successfully");
+        setIsFinalizeModalOpen(false);
+        void router.push("/dashboard/teacher");
+        return;
       }
 
       const response = await createExamMutation.mutateAsync({
-        data: requestPayload as unknown as Record<string, unknown>
-      })
+        data: requestPayload as unknown as Record<string, unknown>,
+      });
 
       if (!response.success) {
-        message.error(response.message ?? 'Failed to create exam')
-        return
+        message.error(response.message ?? "Failed to create exam");
+        return;
       }
 
-      message.success(response.message ?? 'Exam created successfully')
-      setIsFinalizeModalOpen(false)
-      setExamTitle('')
-      setQuestions([])
-      resetBuilder()
+      message.success(response.message ?? "Exam created successfully");
+      setIsFinalizeModalOpen(false);
+      setExamTitle("");
+      setQuestions([]);
+      resetBuilder();
     } catch (error) {
       const apiError = error as {
-        response?: { data?: { message?: string } }
-        message?: string
-      }
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
 
       if (!apiError.response && apiError.message) {
-        message.error(apiError.message)
-        return
+        message.error(apiError.message);
+        return;
       }
 
-      const apiMessage = apiError.response?.data?.message
-      message.error(apiMessage ?? 'Unable to save exam')
+      const apiMessage = apiError.response?.data?.message;
+      message.error(apiMessage ?? "Unable to save exam");
     }
-  }
+  };
 
-  const isBusy = isLoadingExam || isFetchingExam
+  const isBusy = isLoadingExam || isFetchingExam;
   const isMutationPending =
-    createExamMutation.isPending || updateExamMutation.isPending
+    createExamMutation.isPending || updateExamMutation.isPending;
 
   useEffect(() => {
     if (!isEditing) {
-      setFinalizeInitialValues(undefined)
+      setFinalizeInitialValues(undefined);
     }
-  }, [isEditing])
+  }, [isEditing]);
 
   if (isEditing && isBusy) {
     return (
       <div className="flex h-full items-center justify-center">
         <Spin tip="Loading exam..." />
       </div>
-    )
+    );
   }
 
   return (
@@ -543,7 +543,7 @@ export default function CreateTeacherExamPage() {
         <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900">
-              {isEditing ? 'Edit Exam' : 'Create New Exam'}
+              {isEditing ? "Edit Exam" : "Create New Exam"}
             </h1>
           </div>
           <Button
@@ -555,7 +555,7 @@ export default function CreateTeacherExamPage() {
           >
             <span className="flex items-center gap-2">
               <Icon name="save" size="small" />
-              {isEditing ? 'Update Exam' : 'Save Exam'}
+              {isEditing ? "Update Exam" : "Save Exam"}
             </span>
           </Button>
         </header>
@@ -566,16 +566,6 @@ export default function CreateTeacherExamPage() {
               <h2 className="text-lg font-semibold text-slate-900">
                 Question Builder
               </h2>
-              <Button
-                size="small"
-                variant="consensus"
-                onClick={handleGenerateAi}
-              >
-                <span className="flex items-center gap-2">
-                  <Icon name="ai" size="small" />
-                  Generate with AI
-                </span>
-              </Button>
             </div>
 
             <Form
@@ -583,7 +573,7 @@ export default function CreateTeacherExamPage() {
               layout="vertical"
               className="mt-4 space-y-5"
               initialValues={{
-                prompt: ''
+                prompt: "",
               }}
               onFinish={handleAddQuestion}
             >
@@ -593,12 +583,12 @@ export default function CreateTeacherExamPage() {
                 rules={[
                   {
                     required: true,
-                    message: 'Please enter the question content'
+                    message: "Please enter the question content",
                   },
                   {
                     min: 5,
-                    message: 'Question content should be at least 5 characters'
-                  }
+                    message: "Question content should be at least 5 characters",
+                  },
                 ]}
               >
                 <Textarea
@@ -644,8 +634,8 @@ export default function CreateTeacherExamPage() {
                 fullWidth
               >
                 {editingQuestionId
-                  ? 'Update Question'
-                  : 'Add Question to Preview'}
+                  ? "Update Question"
+                  : "Add Question to Preview"}
               </Button>
             </Form>
           </section>
@@ -673,7 +663,7 @@ export default function CreateTeacherExamPage() {
                     Live Exam Preview
                   </h2>
                   <span className="text-sm text-slate-500">
-                    {totalQuestions} question{totalQuestions !== 1 ? 's' : ''}
+                    {totalQuestions} question{totalQuestions !== 1 ? "s" : ""}
                   </span>
                 </div>
 
@@ -688,7 +678,7 @@ export default function CreateTeacherExamPage() {
                           choices={question.choices.map((choice) => ({
                             id: choice.id,
                             label: choice.text,
-                            isCorrect: choice.id === question.correctChoiceId
+                            isCorrect: choice.id === question.correctChoiceId,
                           }))}
                           onEdit={() => handleEditQuestion(question)}
                           onDelete={() =>
@@ -744,5 +734,5 @@ export default function CreateTeacherExamPage() {
         initialValues={finalizeInitialValues}
       />
     </React.Fragment>
-  )
+  );
 }
