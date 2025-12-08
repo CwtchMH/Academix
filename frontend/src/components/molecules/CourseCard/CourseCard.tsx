@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { App } from 'antd'
-import { Button, Icon } from '@/components/atoms'
-import type { CourseCardProps } from './CourseCard.types'
+import React from "react";
+import { App } from "antd";
+import { Button, Icon } from "@/components/atoms";
+import type { CourseCardProps } from "./CourseCard.types";
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   courseName,
@@ -12,23 +12,23 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   teacherId,
   enrollmentCount,
   onDelete,
-  isDeleting = false
+  isDeleting = false,
 }) => {
-  const { message } = App.useApp()
+  const { message } = App.useApp();
 
   const handleCopyCourseId = () => {
-    if (!publicId) return
+    if (!publicId) return;
 
     if (!navigator?.clipboard) {
-      message.error('Clipboard access is not available in this browser.')
-      return
+      message.error("Clipboard access is not available in this browser.");
+      return;
     }
 
     navigator.clipboard
       .writeText(publicId)
-      .then(() => message.success('Course ID copied to clipboard'))
-      .catch(() => message.error('Failed to copy course ID'))
-  }
+      .then(() => message.success("Course ID copied to clipboard"))
+      .catch(() => message.error("Failed to copy course ID"));
+  };
 
   return (
     <article className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
@@ -36,7 +36,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         <h3 className="text-lg font-semibold text-slate-900">{courseName}</h3>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="truncate text-sm text-slate-500">
-            Course ID:{' '}
+            Course ID:{" "}
             <span className="font-mono text-slate-600">{publicId}</span>
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -80,19 +80,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             <p className="text-xs text-slate-500">ID: {teacherId}</p>
           </div>
         </div>
-
-        <div className="flex items-start gap-2">
-          <Icon
-            name="students"
-            size="small"
-            className="mt-0.5 text-emerald-500"
-          />
-          <div>
-            <dt className="font-medium text-slate-500">Enrollment Count</dt>
-            <dd className="text-slate-700">{enrollmentCount}</dd>
-          </div>
-        </div>
       </dl>
     </article>
-  )
-}
+  );
+};

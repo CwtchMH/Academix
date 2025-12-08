@@ -116,7 +116,7 @@ const TeacherCertificatesPage = () => {
       render: (_: unknown, record) => (
         <Space size="small">
           <button
-            className="text-white bg-[#4B5563] text-[12px] font-semibold px-3 py-2 rounded-[6px]"
+            className="!text-white bg-blue-600 text-[12px] font-semibold px-3 py-2 rounded-[6px]"
             onClick={() => handleViewOnScan(record?.transactionHash || "")}
           >
             View on Scan
