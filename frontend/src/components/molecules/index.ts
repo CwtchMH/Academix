@@ -41,3 +41,7 @@ export type {
   ExamPerformanceRecord,
   ExamPerformanceSummary
 } from './ExamPerformanceChart'
+export { QuestionNavigator } from './QuestionNavigator'
+export type { QuestionNavigatorProps, QuestionAnswer } from './QuestionNavigator'
+export { TimeUpModal } from './TimeUpModal'
+export type { TimeUpModalProps } from './TimeUpModal'
