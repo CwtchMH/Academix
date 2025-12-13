@@ -324,12 +324,15 @@ export class AuthController {
   @Post('validate-profile-image')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Validate profile image using AI' })
+  @ApiOperation({ summary: 'Validate profile image using AI and save embedding' })
   @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Image is valid.' })
+  @ApiResponse({ status: 200, description: 'Image is valid and embedding saved.' })
   @ApiResponse({ status: 400, description: 'Image is invalid (e.g., blurry, not a face).' })
-  async validateProfileImage(@Body() validateImageDto: ValidateImageDto) {
-    return this.authService.validateProfileImage(validateImageDto.imageBase64);
+  async validateProfileImage(
+    @CurrentUser() user: IUser,
+    @Body() validateImageDto: ValidateImageDto,
+  ) {
+    return this.authService.validateProfileImage(user.id, validateImageDto.imageBase64);
   }
 
 }

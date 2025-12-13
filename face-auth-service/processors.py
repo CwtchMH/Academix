@@ -11,8 +11,14 @@ from core_ai import ai_engine
 # =============================================================================
 # 1. CHECK BLUR
 # =============================================================================
-def check_blur(img: np.ndarray, threshold: int = 100) -> dict:
-    """Check if image is too blurry using Laplacian variance."""
+def check_blur(img: np.ndarray, threshold: int = 22) -> dict:
+    """
+    Check if image is too blurry using Laplacian variance.
+    
+    Default threshold: 50 (lowered from 100 to accommodate webcam quality)
+    - Profile images: use threshold=80 for stricter check
+    - Webcam/verify: use default 50 for more tolerance
+    """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     score = cv2.Laplacian(gray, cv2.CV_64F).var()
     

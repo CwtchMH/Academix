@@ -42,19 +42,27 @@ interface PasswordResetRequestContext {
   userAgent?: string | string[];
 }
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text?: string;
-      }>;
-    };
-  }>;
+// Face Auth Service Response Types
+interface FaceAuthValidateResponse {
+  valid: boolean;
+  message?: string;
+  embedding?: number[];
+  embedding_version?: string;
+  error_code?: string;
+  reason?: string;
 }
 
-interface ImageValidationResult {
-  isValid: boolean;
-  reason: string;
+interface FaceAuthVerifyResponse {
+  verified: boolean;
+  confidence?: number;
+  is_same_person?: boolean;
+  liveness?: {
+    is_real: boolean | null;
+    spoof_probability: number | null;
+  };
+  checks?: Record<string, string>;
+  error_code?: string;
+  reason?: string;
 }
 
 @Injectable()
@@ -526,7 +534,7 @@ export class AuthService {
   }
 
   /**
-   * Xác thực khuôn mặt của user bằng Gemini
+   * Xác thực khuôn mặt của user bằng face-auth-service
    * @param user Thông tin user từ JWT
    * @param verifyFaceDto Ảnh webcam base64
    * @returns
@@ -534,134 +542,78 @@ export class AuthService {
   async verifyFace(user: IUser, verifyFaceDto: VerifyFaceDto) {
     this.logger.log(`Starting face verification for user: ${user.username}`);
 
-    const { imageUrl: profileImageUrl } = user;
     const { webcamImage } = verifyFaceDto;
 
-    this.logger.log(`Received webcam image for user: ${user?.username}`);
-    this.logger.log(`Profile image URL: ${profileImageUrl}`);
-    this.logger.log(`Webcam image : ${webcamImage}`);
+    // --- Step 1: Lấy embedding đã lưu từ database ---
+    const userDoc = await this.userModel
+      .findById(user.id)
+      .select('+faceEmbedding');
 
-    // --- Validation 1: User đã có ảnh profile chưa? ---
-    if (!profileImageUrl) {
+    if (!userDoc?.faceEmbedding || userDoc.faceEmbedding.length === 0) {
       throw new BadRequestException(
-        'Profile picture not set. Please update your profile.',
+        'Face embedding not found. Please validate your profile image first.',
       );
     }
 
-    // --- Validation 2: Định dạng Base64 ---
+    // --- Step 2: Chuẩn bị ảnh webcam ---
     const webcamImageBase64 = webcamImage.split(',').pop();
     if (!webcamImageBase64) {
       throw new BadRequestException('Invalid webcam image format.');
     }
 
-    let profileImageBase64: string;
-    let profileMimeType: string;
+    // Convert base64 to Buffer
+    const imageBuffer = Buffer.from(webcamImageBase64, 'base64');
 
+    // --- Step 3: Gọi face-auth-service /verify-face ---
+    const faceAuthUrl = this.configService.get<string>('FACE_AUTH_SERVICE_URL') || 'http://localhost:8080';
+    
     try {
-      // --- Step 3: Fetch ảnh profile từ URL (ví dụ: Cloudinary) ---
-      this.logger.log(`Fetching profile image from: ${profileImageUrl}`);
-      const response: AxiosResponse<ArrayBuffer> = await firstValueFrom(
-        this.httpService.get<ArrayBuffer>(profileImageUrl, {
-          responseType: 'arraybuffer',
-        }),
+      this.logger.log(`Calling face-auth-service for user: ${user.username}`);
+      
+      // Create FormData for multipart request
+      const FormData = await import('form-data');
+      const formData = new FormData.default();
+      formData.append('camera_image', imageBuffer, {
+        filename: 'webcam.jpg',
+        contentType: 'image/jpeg',
+      });
+      formData.append('stored_embedding', JSON.stringify(userDoc.faceEmbedding));
+      formData.append('check_liveness', 'true');
+
+      const response = await firstValueFrom(
+        this.httpService.post<FaceAuthVerifyResponse>(
+          `${faceAuthUrl}/verify-face`,
+          formData,
+          {
+            headers: formData.getHeaders(),
+          },
+        ),
       );
 
-      const headers = response.headers as Record<string, string | undefined>;
-      profileMimeType = headers['content-type'] ?? 'image/jpeg';
-      const binaryData = Buffer.from(response.data);
-      profileImageBase64 = binaryData.toString('base64');
-    } catch (error) {
-      this.logger.error(
-        `Failed to fetch profile image for user ${user.username}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException(
-        'Could not retrieve profile image.',
-      );
-    }
+      const result = response.data;
+      this.logger.log(`Face verification result for ${user.username}: verified=${result.verified}, confidence=${result.confidence}`);
 
-    // --- Step 4: Gọi Gemini API ---
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-    const systemPrompt =
-      "You are an expert security AI. Your task is to determine if two images are of the same person. Respond with only the word 'true' or 'false'.";
-
-    const payload = {
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: 'Are these two images of the same person? Image 1 is their official profile. Image 2 is a live webcam snapshot. Answer only "true" or "false".',
-            },
-            {
-              inlineData: {
-                mimeType: profileMimeType,
-                data: profileImageBase64,
-              },
-            },
-            {
-              inlineData: {
-                mimeType: 'image/jpeg', // ảnh webcam là jpeg
-                data: webcamImageBase64,
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'text/plain',
-      },
-    };
-
-    try {
-      this.logger.log(`Calling Gemini API for user: ${user.username}`);
-      const geminiResponse: AxiosResponse<GeminiResponse> =
-        await firstValueFrom(
-          this.httpService.post<GeminiResponse>(apiUrl, payload, {
-            headers: { 'Content-Type': 'application/json' },
-          }),
-        );
-
-      const textResponse =
-        geminiResponse.data.candidates?.[0]?.content.parts?.[0]?.text ?? '';
-
-      const decision = textResponse
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z]/g, '');
-
-      this.logger.log(`Gemini response for ${user.username}: "${decision}"`);
-
-      // --- Step 5: Xử lý kết quả ---
-      if (decision === 'true') {
+      if (result.verified) {
         return {
           success: true,
           message: 'Face verified successfully.',
+          confidence: result.confidence,
+          liveness: result.liveness,
         };
       } else {
-        this.logger.warn(`Face verification failed for user: ${user.username}`);
+        this.logger.warn(`Face verification failed for user: ${user.username}, reason: ${result.reason || result.error_code}`);
         return {
           success: false,
-          message: 'Face does not match profile. Verification failed.',
+          message: result.reason || 'Face verification failed.',
+          error_code: result.error_code,
+          checks: result.checks,
         };
       }
     } catch (error) {
-      if (error instanceof UnauthorizedException) throw error; // Ném lại lỗi 401
-
       this.logger.error(
-        `Gemini API call failed for user ${user.username}`,
+        `Face auth service call failed for user ${user.username}`,
         error.response?.data || error.message,
       );
-      if (error.response?.status === 403) {
-        throw new InternalServerErrorException(
-          'Face verification failed: Invalid API Key or permissions.',
-        );
-      }
       throw new InternalServerErrorException(
         'Face verification service failed.',
       );
@@ -669,96 +621,74 @@ export class AuthService {
   }
 
   /**
-   * Use Gemini to check the quality of the profile image
+   * Validate profile image using face-auth-service and save embedding
+   * @param userId User ID to save embedding to
    * @param imageBase64 Image (including data:image/jpeg;base64,)
    * @returns
    */
-  async validateProfileImage(imageBase64: string) {
-    this.logger.log('Validating new profile image...');
+  async validateProfileImage(userId: string, imageBase64: string) {
+    this.logger.log(`Validating profile image for user: ${userId}`);
 
-    // Tách mime type và data
+    // Parse base64 data URL
     const parts = imageBase64.match(/^data:(image\/(?:jpeg|png));base64,(.*)$/);
     if (!parts || parts.length !== 3) {
       throw new BadRequestException('Invalid image format. Must be data URL (jpeg/png).');
     }
     
-    const mimeType = parts[1]; // "image/jpeg"
-    const base64Data = parts[2]; // "..."
+    const mimeType = parts[1];
+    const base64Data = parts[2];
 
-    // call Gemini API
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    if (!apiKey) {
-      this.logger.error('GEMINI_API_KEY is not set.');
-      throw new InternalServerErrorException('AI service is not configured.');
-    }
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    // Convert base64 to Buffer
+    const imageBuffer = Buffer.from(base64Data, 'base64');
 
-    const systemPrompt =
-      "You are an AI passport photo checker. Analyze *the user's image. Determine if it is a valid profile picture for a secure exam system. Check for: 1. Only one clear human face. 2. Face is centered. 3. Face is looking forward. 4. No obstructions (sunglasses, masks). 5. Image is clear (not blurry).";
-    
-    // Ask Gemini to return JSON
-    const jsonSchema = {
-      type: 'OBJECT',
-      properties: {
-        isValid: { type: 'BOOLEAN' },
-        reason: { type: 'STRING' },
-      },
-      required: ['isValid', 'reason'],
-    };
-
-    const payload = {
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: 'Analyze this image and return JSON.' },
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: base64Data,
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: jsonSchema,
-      },
-    };
+    // Call face-auth-service /validate-profile
+    const faceAuthUrl = this.configService.get<string>('FACE_AUTH_SERVICE_URL') || 'http://localhost:8080';
 
     try {
-      const geminiResponse = await firstValueFrom(
-        this.httpService.post(apiUrl, payload, {
-          headers: { 'Content-Type': 'application/json' },
-        }),
+      this.logger.log('Calling face-auth-service /validate-profile...');
+
+      // Create FormData for multipart request
+      const FormData = await import('form-data');
+      const formData = new FormData.default();
+      formData.append('file', imageBuffer, {
+        filename: 'profile.jpg',
+        contentType: mimeType,
+      });
+
+      const response = await firstValueFrom(
+        this.httpService.post<FaceAuthValidateResponse>(
+          `${faceAuthUrl}/validate-profile`,
+          formData,
+          {
+            headers: formData.getHeaders(),
+          },
+        ),
       );
 
-      // Parse text JSON từ Gemini
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const jsonText = geminiResponse.data.candidates[0].content.parts[0].text;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument
-      const result: ImageValidationResult = JSON.parse(jsonText);
+      const result = response.data;
+      this.logger.log(`Validation result: valid=${result.valid}, message=${result.message || result.reason}`);
 
-      this.logger.log(`Image validation result: ${JSON.stringify(result)}`);
-
-      // --- Xử lý kết quả ---
-      if (result.isValid) {
-        return {
-          success: true,
-          message: 'Image is valid.',
-        };
-      } else {
-        // Throw 400 error with reason from AI
+      if (!result.valid) {
         throw new BadRequestException(result.reason || 'Image is not valid.');
       }
+
+      // Save embedding to database
+      if (result.embedding && result.embedding.length > 0) {
+        await this.userModel.findByIdAndUpdate(userId, {
+          faceEmbedding: result.embedding,
+          embeddingVersion: result.embedding_version || 'arcface_v1',
+        });
+        this.logger.log(`Saved face embedding (${result.embedding.length} dimensions) for user: ${userId}`);
+      }
+
+      return {
+        success: true,
+        message: 'Image is valid and embedding saved.',
+      };
     } catch (error) {
-      if (error instanceof BadRequestException) throw error; // Ném lại lỗi 400
-      this.logger.error('Gemini API call failed', error.response?.data || error.message);
-      throw new InternalServerErrorException('AI validation service failed.');
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('Face auth service call failed', error.response?.data || error.message);
+      throw new InternalServerErrorException('Face validation service failed.');
     }
   }
 }
