@@ -2,18 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { AuthService } from '@/services'
-import { isAxiosError, type AxiosError } from 'axios'
+import { isAxiosError } from 'axios'
 import { Icon } from '@/components/atoms/Icon/Icon'
-
-interface ErrorResponse {
-  message: string | string[]
-}
 
 interface FaceVerificationModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => void // Prop để báo hiệu xác thực thành công
+  onSuccess: () => void
 }
+
+// Processing steps
+type ProcessingStep = 'idle' | 'capturing' | 'verifying' | 'done'
 
 export const FaceVerificationModal = ({
   isOpen,
@@ -24,10 +23,12 @@ export const FaceVerificationModal = ({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isSuccess, setIsSuccess] = useState<boolean>(false)
+  
+  // Processing modal state
+  const [processingStep, setProcessingStep] = useState<ProcessingStep>('idle')
 
   // Hook API để gọi /auth/verify-face
-  const { mutate: verifyFace, isPending } = AuthService.usePost<any>( // Dùng `any` cho response
+  const { mutate: verifyFace } = AuthService.usePost<any>(
     {
       url: '/verify-face'
     },
@@ -36,36 +37,31 @@ export const FaceVerificationModal = ({
         const success = data?.success
         if (success) {
           setError(null)
-          setIsSuccess(true)
+          setProcessingStep('done')
           // Hiển thị thông báo thành công trong 2 giây rồi đóng modal
           setTimeout(() => {
-            setIsSuccess(false)
+            setProcessingStep('idle')
             onClose()
-            onSuccess() // Báo cho trang cha là đã thành công
-          }, 5000)
+            onSuccess()
+          }, 2000)
         } else {
           // Thất bại -> giữ modal mở, hiển thị lỗi và cho phép thử lại
           const message = data?.message || 'Face verification failed.'
           const msg = Array.isArray(message) ? message.join(', ') : message
           setError(msg)
-          // Optionally show a non-blocking UI toast instead of alert
-          console.warn('Face verification failed:', msg)
-          // DON'T call onClose() or onSuccess() so user can retry
+          setProcessingStep('idle')
         }
       },
       onError: (err: unknown) => {
+        let msg = 'Face verification failed.'
         if (isAxiosError(err)) {
-          const message =
-            err.response?.data?.message || 'Face verification failed.'
-          setError(Array.isArray(message) ? message.join(', ') : message)
-          return
+          const message = err.response?.data?.message || msg
+          msg = Array.isArray(message) ? message.join(', ') : message
+        } else if (err && typeof err === 'object' && 'message' in err) {
+          msg = String((err as any).message)
         }
-        // generic fallback for non-Axios errors
-        const msg =
-          err && typeof err === 'object' && 'message' in err
-            ? String((err as any).message)
-            : 'Face verification failed.'
         setError(msg)
+        setProcessingStep('idle')
       }
     }
   )
@@ -76,7 +72,7 @@ export const FaceVerificationModal = ({
       setError(null)
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 480, height: 360 } // Yêu cầu kích thước nhỏ
+          video: { width: 480, height: 360 }
         })
         setStream(mediaStream)
         if (videoRef.current) {
@@ -103,11 +99,10 @@ export const FaceVerificationModal = ({
       stopStream()
     }
 
-    // Cleanup khi component unmount
     return () => {
       stopStream()
     }
-  }, [isOpen]) // Chỉ chạy khi modal đóng/mở
+  }, [isOpen])
 
   // Hàm chụp ảnh và gọi API
   const handleVerifyFace = () => {
@@ -117,6 +112,8 @@ export const FaceVerificationModal = ({
     }
 
     setError(null)
+    setProcessingStep('capturing')
+    
     const video = videoRef.current
     const canvas = canvasRef.current
 
@@ -130,10 +127,12 @@ export const FaceVerificationModal = ({
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
     }
 
-    // Convert canvas sang base64 (định dạng Gemini có thể đọc)
-    const base64Image = canvas.toDataURL('image/jpeg', 0.9) // 90% quality
+    // Convert canvas sang base64
+    const base64Image = canvas.toDataURL('image/jpeg', 0.9)
 
-    // Gọi API
+    // Update step and call API
+    setProcessingStep('verifying')
+    
     verifyFace({
       data: {
         webcamImage: base64Image
@@ -141,22 +140,47 @@ export const FaceVerificationModal = ({
     })
   }
 
+  const handleClose = () => {
+    if (processingStep === 'idle') {
+      setError(null)
+      onClose()
+    }
+  }
+
+  // Get step info for display
+  const getStepInfo = () => {
+    switch (processingStep) {
+      case 'capturing':
+        return { title: 'Capturing Image', description: 'Taking a snapshot from camera...' }
+      case 'verifying':
+        return { title: 'Verifying Face', description: 'AI is checking your identity...' }
+      case 'done':
+        return { title: 'Verification Successful!', description: 'Redirecting to exam...' }
+      default:
+        return { title: '', description: '' }
+    }
+  }
+
+  const stepInfo = getStepInfo()
+  const isProcessing = processingStep !== 'idle'
+
   return (
     <>
+      {/* Backdrop */}
       <div
         className={`fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 transition-opacity ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
-      {/* Modal Content */}
+      {/* Main Modal - Camera View */}
       <div
         role="dialog"
         aria-modal="true"
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all ${
-          isOpen
+          isOpen && !isProcessing
             ? 'opacity-100 scale-100'
             : 'opacity-0 scale-95 pointer-events-none'
         }`}
@@ -168,9 +192,8 @@ export const FaceVerificationModal = ({
                 Face Verification
               </h2>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-[var(--medium-text)] hover:text-[var(--dark-text)] p-1 rounded-full hover:bg-gray-100"
-                disabled={isPending}
               >
                 <Icon
                   name="close"
@@ -197,23 +220,6 @@ export const FaceVerificationModal = ({
 
             {/* Canvas ẩn để chụp ảnh */}
             <canvas ref={canvasRef} className="hidden" />
-
-            {/* Hiển thị thông báo thành công */}
-            {isSuccess && (
-              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <Icon name="check" className="text-green-600" size="medium" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-green-800">
-                    Verification Successful!
-                  </p>
-                  <p className="text-xs text-green-600">
-                    Your face has been verified. Redirecting to exam...
-                  </p>
-                </div>
-              </div>
-            )}
 
             {/* Hiển thị lỗi */}
             {error && (
@@ -243,22 +249,68 @@ export const FaceVerificationModal = ({
           {/* Footer Buttons */}
           <div className="bg-gray-50 px-8 py-4 flex justify-end gap-3 rounded-b-lg">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="btn-secondary px-6 py-2 text-sm font-semibold rounded-md shadow-sm"
-              disabled={isPending || isSuccess}
             >
               Cancel
             </button>
             <button
               onClick={handleVerifyFace}
               className="btn-primary px-6 py-2 text-sm font-semibold rounded-md shadow-sm disabled:opacity-50"
-              disabled={isPending || !stream || isSuccess} // Tắt nút khi đang load, chưa có stream hoặc đã thành công
+              disabled={!stream}
             >
-              {isPending ? 'Verifying...' : 'Verify My Face'}
+              Verify My Face
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Processing Modal */}
+      <div
+        className={`fixed inset-0 z-[60] flex items-center justify-center p-4 transition-all ${
+          isOpen && isProcessing
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-95 pointer-events-none'
+        }`}
+      >
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-8">
+          <div className="flex flex-col items-center justify-center py-4">
+            {processingStep === 'done' ? (
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <Icon name="check" className="text-green-600" size="large" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+              </div>
+            )}
+            
+            <h3 className="mt-6 text-xl font-semibold text-slate-800">
+              {stepInfo.title}
+            </h3>
+            <p className="mt-2 text-sm text-slate-500 text-center">
+              {stepInfo.description}
+            </p>
+            
+            {/* Progress steps indicator */}
+            <div className="mt-6 flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                processingStep === 'capturing' || processingStep === 'verifying' || processingStep === 'done' 
+                  ? 'bg-blue-500' : 'bg-gray-300'
+              }`} />
+              <div className={`w-2 h-2 rounded-full ${
+                processingStep === 'verifying' || processingStep === 'done' 
+                  ? 'bg-blue-500' : 'bg-gray-300'
+              }`} />
+              <div className={`w-2 h-2 rounded-full ${
+                processingStep === 'done' 
+                  ? 'bg-green-500' : 'bg-gray-300'
+              }`} />
+            </div>
           </div>
         </div>
       </div>
     </>
   )
 }
+

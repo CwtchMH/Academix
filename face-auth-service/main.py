@@ -1,7 +1,7 @@
 # main.py - Face Profile Validation API
 import cv2
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from contextlib import asynccontextmanager
 
 from core_ai import ai_engine
@@ -116,8 +116,8 @@ async def validate_profile(file: UploadFile = File(...)):
 @app.post("/verify-face")
 async def verify_face(
     camera_image: UploadFile = File(...),
-    stored_embedding: str = None,
-    check_liveness: bool = True
+    stored_embedding: str = Form(...),
+    check_liveness: bool = Form(True)
 ):
     """
     Verify if camera image matches stored profile embedding.

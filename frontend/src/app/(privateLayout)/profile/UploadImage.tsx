@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Modal, Button, message, Image } from 'antd'
+import { Modal, Button, message, Image, Spin } from 'antd'
 import type { UploadFile, UploadProps } from 'antd'
 import { ImageUploadArea } from '@/components/molecules'
 import { updateProfile, validateProfileImage } from '@/services'
 import { useAuth } from '@/stores/auth'
+import { LoadingOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import './upload-image.css'
 
 interface UploadImageProps {
@@ -12,6 +13,9 @@ interface UploadImageProps {
   onUploadSuccess?: (imageUrl: string) => void
   currentImageUrl?: string
 }
+
+// Processing steps
+type ProcessingStep = 'idle' | 'validating' | 'uploading' | 'saving' | 'done'
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -32,7 +36,10 @@ const UploadImage = ({
   const [previewImage, setPreviewImage] = useState<string>('')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [messageApi, contextHolder] = message.useMessage();
+  
+  // Processing modal state
+  const [processingStep, setProcessingStep] = useState<ProcessingStep>('idle')
+  const [processingError, setProcessingError] = useState<string | null>(null)
 
   // Handlers
   const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
@@ -57,14 +64,13 @@ const UploadImage = ({
       const response = await updateProfile({ imageUrl })
       if (response.success) {
         setUser(response.data.user)
-        message.success('Avatar updated successfully!')
         onUploadSuccess?.(imageUrl)
-        onClose()
+        return true
       } else {
-        message.error(response.message || 'Failed to update avatar')
+        throw new Error(response.message || 'Failed to update avatar')
       }
     } catch (error: any) {
-      message.error(
+      throw new Error(
         error.response?.data?.message ||
           'Failed to update profile. Please try again.'
       )
@@ -96,25 +102,20 @@ const UploadImage = ({
       return
     }
 
-    // Upload to Cloudinary
+    // Start processing
     setUploading(true)
-    let base64Image = '';
-    try {
-      // Convert sang Base64 ---
-      base64Image = await getBase64(file.originFileObj as File);
+    setProcessingStep('validating')
+    setProcessingError(null)
 
-      // Call AI Validation ---
-      messageApi.open({
-        key: 'ai-validate',
-        type: 'loading',
-        content: 'AI is validating your image...',
-      });
-      await validateProfileImage(base64Image); // Send base64 (including data:...)
-      messageApi.success({
-        key: 'ai-validate',
-        content: 'Image is valid! Uploading...',
-      });
-      // (If AI succeeds) Upload to Cloudinary
+    try {
+      // Step 1: Convert to Base64
+      const base64Image = await getBase64(file.originFileObj as File);
+
+      // Step 2: AI Validation
+      await validateProfileImage(base64Image);
+      
+      // Step 3: Upload to Cloudinary
+      setProcessingStep('uploading')
       const formData = new FormData()
       formData.append('file', file.originFileObj)
       formData.append('upload_preset', 'my_images')
@@ -128,29 +129,34 @@ const UploadImage = ({
       )
 
       const data = await response.json();
-      if (data?.secure_url) {
-        // (If Cloudinary succeeds) Update profile
-        await handleUpdateImageProfile(data.secure_url);
-        // (handleUpdateImageProfile already has message.success and onClose)
-      } else {
+      if (!data?.secure_url) {
         throw new Error('Cloudinary upload failed.');
       }
-    } catch (error: any) {
-      // Handle errors (from AI or Cloudinary)
-      console.error('Upload error:', error);
-      messageApi.destroy('ai-validate'); // Close loading message
-      
-      // // Display error from AI (400 Bad Request)
-      const errorMessage = 
-        error.response?.data?.error?.message || // Get detailed message from your error structure
-        error.response?.data?.message ||        // Fallback for default NestJS error structure
-        'Upload failed. Please try again.';
 
-      // Show errors to users (longer time to read: 10s)
-      messageApi.error({
-        content: errorMessage,
-        duration: 10, 
-      });
+      // Step 4: Update profile
+      setProcessingStep('saving')
+      await handleUpdateImageProfile(data.secure_url);
+      
+      // Step 5: Done
+      setProcessingStep('done')
+      
+      // Close modal after 1.5s showing success
+      setTimeout(() => {
+        setProcessingStep('idle')
+        setFileList([])
+        onClose()
+      }, 1500)
+      
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      const errorMessage = 
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Upload failed. Please try again.';
+      
+      setProcessingError(errorMessage)
+      setProcessingStep('idle')
     } finally {
       setUploading(false)
     }
@@ -158,7 +164,16 @@ const UploadImage = ({
 
   const handleCancel = () => {
     setFileList([])
+    setProcessingStep('idle')
+    setProcessingError(null)
     onClose()
+  }
+
+  const handleCloseProcessingModal = () => {
+    if (processingStep === 'idle' || processingError) {
+      setProcessingStep('idle')
+      setProcessingError(null)
+    }
   }
 
   // Upload configuration
@@ -186,9 +201,28 @@ const UploadImage = ({
     accept: 'image/*'
   }
 
+  // Get step info for display
+  const getStepInfo = () => {
+    switch (processingStep) {
+      case 'validating':
+        return { title: 'Validating Image', description: 'AI is checking your photo quality...' }
+      case 'uploading':
+        return { title: 'Uploading Image', description: 'Uploading to cloud storage...' }
+      case 'saving':
+        return { title: 'Saving Profile', description: 'Updating your profile...' }
+      case 'done':
+        return { title: 'Success!', description: 'Your avatar has been updated.' }
+      default:
+        return { title: '', description: '' }
+    }
+  }
+
+  const stepInfo = getStepInfo()
+  const isProcessing = processingStep !== 'idle'
+
   return (
     <>
-    {contextHolder}
+      {/* Main Upload Modal */}
       <Modal
         title={
           <div className="flex items-center gap-2">
@@ -197,7 +231,7 @@ const UploadImage = ({
             </span>
           </div>
         }
-        open={isOpen}
+        open={isOpen && !isProcessing}
         onCancel={handleCancel}
         width={650}
         className="upload-image-modal"
@@ -220,6 +254,14 @@ const UploadImage = ({
         }
       >
         <div className="py-4">
+          {/* Error Alert */}
+          {processingError && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm font-medium text-red-800">Upload Failed</p>
+              <p className="text-sm text-red-600 mt-1">{processingError}</p>
+            </div>
+          )}
+          
           <ImageUploadArea
             currentImageUrl={currentImageUrl}
             uploadProps={uploadProps}
@@ -230,7 +272,54 @@ const UploadImage = ({
           />
         </div>
       </Modal>
-      Preview Modal
+
+      {/* Processing Modal */}
+      <Modal
+        open={isProcessing}
+        closable={false}
+        footer={null}
+        centered
+        width={400}
+        maskClosable={false}
+      >
+        <div className="flex flex-col items-center justify-center py-8">
+          {processingStep === 'done' ? (
+            <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a' }} />
+          ) : (
+            <Spin 
+              indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} 
+            />
+          )}
+          <h3 className="mt-6 text-xl font-semibold text-slate-800">
+            {stepInfo.title}
+          </h3>
+          <p className="mt-2 text-sm text-slate-500 text-center">
+            {stepInfo.description}
+          </p>
+          
+          {/* Progress steps indicator */}
+          <div className="mt-6 flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${
+              processingStep === 'validating' || processingStep === 'uploading' || processingStep === 'saving' || processingStep === 'done' 
+                ? 'bg-blue-500' : 'bg-gray-300'
+            }`} />
+            <div className={`w-2 h-2 rounded-full ${
+              processingStep === 'uploading' || processingStep === 'saving' || processingStep === 'done' 
+                ? 'bg-blue-500' : 'bg-gray-300'
+            }`} />
+            <div className={`w-2 h-2 rounded-full ${
+              processingStep === 'saving' || processingStep === 'done' 
+                ? 'bg-blue-500' : 'bg-gray-300'
+            }`} />
+            <div className={`w-2 h-2 rounded-full ${
+              processingStep === 'done' 
+                ? 'bg-green-500' : 'bg-gray-300'
+            }`} />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Preview Modal */}
       <Modal
         open={previewOpen}
         title="Preview Image"
@@ -250,3 +339,4 @@ const UploadImage = ({
 }
 
 export default UploadImage
+

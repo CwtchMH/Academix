@@ -23,6 +23,13 @@ export class User {
   @Prop({ type: String, trim: true })
   imageUrl?: string;
 
+  // Face Embedding for face authentication
+  @Prop({ type: [Number], select: false })
+  faceEmbedding?: number[];
+
+  @Prop({ type: String })
+  embeddingVersion?: string;
+
   @Prop({
     type: String,
     enum: ['student', 'teacher', 'admin'],
