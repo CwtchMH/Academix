@@ -1,0 +1,56 @@
+services:
+  # NestJS Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: academix-backend
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - FACE_AUTH_SERVICE_URL=http://face-auth-service:8080
+    depends_on:
+      - face-auth-service
+    networks:
+      - academix-network
+    restart: unless-stopped
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_ENV=${NEXT_PUBLIC_ENV:-development}
+        - NEXT_PUBLIC_API_ENDPOINT=${NEXT_PUBLIC_API_ENDPOINT:-http://localhost:8000/api/v1}
+        - NEXT_PUBLIC_API_INTERNAL_ENDPOINT=${NEXT_PUBLIC_API_INTERNAL_ENDPOINT:-http://localhost:8000/api/v1}
+    container_name: academix-frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    networks:
+      - academix-network
+    restart: unless-stopped
+
+  # Python Face Authentication Service
+  face-auth-service:
+    build:
+      context: ./face-auth-service
+      dockerfile: Dockerfile
+    container_name: academix-face-auth
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - academix-network
+    restart: unless-stopped
+
+networks:
+  academix-network:
+    driver: bridge

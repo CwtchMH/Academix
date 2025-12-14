@@ -249,10 +249,9 @@ export const useExams = (
 
   return ExamService.useGet<ExamsResponse>({
     url: `/teacher/${teacherId}${queryString}`,
+    key: `teacher-exams-${teacherId}-${JSON.stringify(queryParams)}`,
     options: {
-      ...options,
-      // Include queryParams in queryKey for proper caching
-      queryKey: ['exams', 'teacher', teacherId, queryParams]
+      ...options
     }
   })
 }

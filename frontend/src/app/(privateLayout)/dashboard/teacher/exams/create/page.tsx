@@ -122,7 +122,7 @@ export default function CreateTeacherExamPage() {
     refetchOnWindowFocus: false,
     retry: false,
   });
-  const { data: teacherCoursesData } = useTeacherCourses(user?.id, {
+  const { data: teacherCoursesData } = useTeacherCourses(user?.id, undefined, {
     enabled: Boolean(user?.id),
     refetchOnWindowFocus: false,
   });

@@ -1,0 +1,75 @@
+# Docker Compose for Development with Hot Reload
+# Usage: docker compose -f docker-compose.dev.yml up
+
+services:
+  # NestJS Backend with hot reload
+  backend:
+    image: node:20-alpine
+    container_name: academix-backend-dev
+    working_dir: /app
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    env_file:
+      - ./backend/.env
+    environment:
+      - FACE_AUTH_SERVICE_URL=http://face-auth-service:8080
+    command: >
+      sh -c "apk add --no-cache python3 make g++ cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev &&
+             npm install &&
+             npm run start:dev"
+    depends_on:
+      - face-auth-service
+    networks:
+      - academix-network
+
+  # Next.js Frontend with hot reload
+  frontend:
+    image: node:20-alpine
+    container_name: academix-frontend-dev
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    env_file:
+      - ./frontend/.env
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - backend
+    networks:
+      - academix-network
+
+  # Python Face Auth Service with hot reload
+  face-auth-service:
+    image: python:3.11-slim
+    container_name: academix-face-auth-dev
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./face-auth-service:/app
+      - face_auth_cache:/root/.cache
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      sh -c "apt-get update && 
+             apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 &&
+             pip install -r requirements.docker.txt &&
+             uvicorn main:app --host 0.0.0.0 --port 8080 --reload"
+    networks:
+      - academix-network
+
+networks:
+  academix-network:
+    driver: bridge
+
+volumes:
+  backend_node_modules:
+  frontend_node_modules:
+  frontend_next:
+  face_auth_cache:

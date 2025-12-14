@@ -76,10 +76,9 @@ export const useTeacherCourses = (
 
   return CourseService.useGet<TeacherCoursesResponse>({
     url: teacherId ? `/teacher/${teacherId}${queryString}` : '',
+    key: `teacher-courses-${teacherId}-${JSON.stringify(queryParams)}`,
     options: {
       enabled: Boolean(teacherId),
-      // Include queryParams in queryKey for proper caching
-      queryKey: ['courses', 'teacher', teacherId, queryParams],
       ...options
     }
   })

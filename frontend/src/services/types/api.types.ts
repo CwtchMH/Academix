@@ -61,3 +61,19 @@ export interface StudentDashboardSummary {
   performance: StudentDashboardPerformance
   completedExams: StudentDashboardExamResult[]
 }
+
+export interface StudentDashboardCourseSnapshot {
+  courseId: string
+  coursePublicId: string
+  courseName: string
+  upcomingExamCount: number
+  completedExamCount: number
+  averageScore: number | null
+  lastSubmissionAt: string | null
+}
+
+export interface StudentDashboardPendingActions {
+  pendingCertificateCount: number
+  examsThisWeek: number
+  hasActiveExam: boolean
+}
