@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Modal, Button, message, Image } from 'antd'
 import type { UploadFile, UploadProps } from 'antd'
 import { ImageUploadArea } from '@/components/molecules'
-import { updateProfile, validateProfileImage } from '@/services'
+import { updateProfile } from '@/services'
 import { useAuth } from '@/stores/auth'
+import * as faceapi from 'face-api.js'
+import { useFaceApi } from '@/hooks/useFaceApi'
 import './upload-image.css'
 
 interface UploadImageProps {
@@ -15,24 +17,28 @@ interface UploadImageProps {
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = (error) => reject(error)
+  })
 
 const UploadImage = ({
   isOpen,
   onClose,
   onUploadSuccess,
-  currentImageUrl
+  currentImageUrl,
 }: UploadImageProps) => {
   const { setUser } = useAuth()
   const [fileList, setFileList] = useState<UploadFile[]>([])
   const [previewImage, setPreviewImage] = useState<string>('')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [messageApi, contextHolder] = message.useMessage();
+  const [validating, setValidating] = useState(false)
+  const [messageApi, contextHolder] = message.useMessage()
+
+  // Load models via custom hook
+  const { modelsLoaded } = useFaceApi()
 
   // Handlers
   const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
@@ -65,19 +71,82 @@ const UploadImage = ({
       }
     } catch (error: any) {
       message.error(
-        error.response?.data?.message ||
-          'Failed to update profile. Please try again.'
+        error?.response?.data?.message || 'Failed to update profile. Please try again.'
       )
     }
   }
 
+  // Local validation using face-api.js
+  const validateImageLocally = async (file: File): Promise<boolean> => {
+    if (!modelsLoaded) {
+      messageApi.error('AI models are still loading. Please wait.')
+      return false
+    }
+
+    setValidating(true)
+    try {
+      const img = document.createElement('img')
+      const imageSrc = await getBase64(file)
+      img.src = imageSrc
+      await new Promise((resolve) => {
+        img.onload = () => resolve(null)
+        img.onerror = () => resolve(null)
+      })
+
+      // Detect faces with SsdMobilenetv1 for better accuracy
+      const detections = await faceapi
+        .detectAllFaces(img, new faceapi.SsdMobilenetv1Options())
+        .withFaceLandmarks()
+        .withFaceDescriptors()
+      
+      console.log('FaceAPI detections:', detections)
+
+      if (!detections || detections.length === 0) {
+        messageApi.error('No face detected. Please use a clear portrait photo.')
+        return false
+      }
+      if (detections.length > 1) {
+        messageApi.error('Multiple faces detected. Please use a photo with only yourself.')
+        return false
+      }
+
+      const face = detections[0]
+      if (face.detection.score < 0.8) {
+        messageApi.error('Face is not clear enough. Please improve lighting or focus.')
+        return false
+      }
+
+      const box = face.detection.box
+      const imgCenter = img.width / 2
+      const faceCenter = box.x + box.width / 2
+      const allowedDeviation = img.width * 0.2
+
+      if (Math.abs(faceCenter - imgCenter) > allowedDeviation) {
+        messageApi.warning('Face is not centered. Please align your face in the middle.')
+        return false
+      }
+
+      if (box.width < img.width * 0.2) {
+        messageApi.error('Face is too small. Please move closer to the camera.')
+        return false
+      }
+
+      messageApi.success('Photo looks good! Ready to upload.')
+      return true
+    } catch (err) {
+      console.error('Face validation error:', err)
+      messageApi.error('Error analyzing image. Please try another photo.')
+      return false
+    } finally {
+      setValidating(false)
+    }
+  }
+
   const handleUpload = async () => {
-    // Validation
     if (fileList.length === 0) {
       message.warning('Please select an image to upload')
       return
     }
-
     const file = fileList[0]
     if (!file.originFileObj) {
       message.error('Invalid file')
@@ -96,61 +165,37 @@ const UploadImage = ({
       return
     }
 
-    // Upload to Cloudinary
-    setUploading(true)
-    let base64Image = '';
-    try {
-      // Convert sang Base64 ---
-      base64Image = await getBase64(file.originFileObj as File);
+    // Validate locally with face-api
+    const isValid = await validateImageLocally(file.originFileObj as File)
+    if (!isValid) return
 
-      // Call AI Validation ---
-      messageApi.open({
-        key: 'ai-validate',
-        type: 'loading',
-        content: 'AI is validating your image...',
-      });
-      await validateProfileImage(base64Image); // Send base64 (including data:...)
-      messageApi.success({
-        key: 'ai-validate',
-        content: 'Image is valid! Uploading...',
-      });
-      // (If AI succeeds) Upload to Cloudinary
+    setUploading(true)
+    try {
       const formData = new FormData()
       formData.append('file', file.originFileObj)
       formData.append('upload_preset', 'my_images')
 
       const response = await fetch(
         'https://api.cloudinary.com/v1_1/dl9mhhoqs/image/upload',
-        {
-          method: 'POST',
-          body: formData
-        }
+        { method: 'POST', body: formData }
       )
 
-      const data = await response.json();
+      const data = await response.json()
       if (data?.secure_url) {
-        // (If Cloudinary succeeds) Update profile
-        await handleUpdateImageProfile(data.secure_url);
-        // (handleUpdateImageProfile already has message.success and onClose)
+        await handleUpdateImageProfile(data.secure_url)
       } else {
-        throw new Error('Cloudinary upload failed.');
+        throw new Error('Image upload failed.')
       }
     } catch (error: any) {
-      // Handle errors (from AI or Cloudinary)
-      console.error('Upload error:', error);
-      messageApi.destroy('ai-validate'); // Close loading message
-      
-      // // Display error from AI (400 Bad Request)
-      const errorMessage = 
-        error.response?.data?.error?.message || // Get detailed message from your error structure
-        error.response?.data?.message ||        // Fallback for default NestJS error structure
-        'Upload failed. Please try again.';
-
-      // Show errors to users (longer time to read: 10s)
+      console.error('Upload error:', error)
+      const errorMessage =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.message ||
+        'Upload failed. Please try again.'
       messageApi.error({
         content: errorMessage,
-        duration: 10, 
-      });
+        duration: 10,
+      })
     } finally {
       setUploading(false)
     }
@@ -161,7 +206,6 @@ const UploadImage = ({
     onClose()
   }
 
-  // Upload configuration
   const uploadProps: UploadProps = {
     name: 'image',
     listType: 'picture-card',
@@ -180,21 +224,19 @@ const UploadImage = ({
         message.error('Image must be smaller than 5MB!')
         return false
       }
-      return false // Prevent auto upload
+      return false
     },
     maxCount: 1,
-    accept: 'image/*'
+    accept: 'image/*',
   }
 
   return (
     <>
-    {contextHolder}
+      {contextHolder}
       <Modal
         title={
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-slate-800">
-              Upload Avatar
-            </span>
+            <span className="text-lg font-semibold text-slate-800">Upload Avatar</span>
           </div>
         }
         open={isOpen}
@@ -210,11 +252,11 @@ const UploadImage = ({
               type="primary"
               size="large"
               onClick={handleUpload}
-              loading={uploading}
-              disabled={fileList.length === 0}
+              loading={uploading || validating}
+              disabled={fileList.length === 0 || !modelsLoaded}
               className="min-w-[100px]"
             >
-              {uploading ? 'Uploading...' : 'Upload'}
+              {validating ? 'Analyzing...' : uploading ? 'Uploading...' : 'Upload'}
             </Button>
           </div>
         }
@@ -230,20 +272,9 @@ const UploadImage = ({
           />
         </div>
       </Modal>
-      Preview Modal
-      <Modal
-        open={previewOpen}
-        title="Preview Image"
-        footer={null}
-        onCancel={() => setPreviewOpen(false)}
-        centered
-      >
-        <Image
-          alt="preview"
-          style={{ width: '100%' }}
-          src={previewImage}
-          preview={false}
-        />
+
+      <Modal open={previewOpen} title="Preview Image" footer={null} onCancel={() => setPreviewOpen(false)} centered>
+        <Image alt="preview" style={{ width: '100%' }} src={previewImage} preview={false} />
       </Modal>
     </>
   )
