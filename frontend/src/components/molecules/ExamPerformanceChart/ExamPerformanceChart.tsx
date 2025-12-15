@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo, useCallback, Component, type ReactNode } from 'react'
 import {
   BarChart,
   Bar,
@@ -16,6 +16,48 @@ import {
   type ExamPerformanceChartProps,
   type ExamPerformanceRecord
 } from './ExamPerformanceChart.types'
+
+// Error Boundary to catch recharts errors
+interface ChartErrorBoundaryState {
+  hasError: boolean
+  error?: Error
+}
+
+class ChartErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
+  ChartErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(error: Error): ChartErrorBoundaryState {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(
+      '[ExamPerformanceChart] Chart rendering error:',
+      error,
+      errorInfo
+    )
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        this.props.fallback ?? (
+          <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+            Unable to render chart. Please try refreshing the page.
+          </div>
+        )
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 interface CustomizedAxisTickProps {
   x?: number
@@ -109,17 +151,45 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
   const safeRecords = Array.isArray(records) ? records : []
 
   const chartData = useMemo<ChartDatum[]>(() => {
-    return safeRecords.map((record) => {
-      const total = record.passCount + record.failCount
-      const safeTotal = total || 1
-      const passRate = (record.passCount / safeTotal) * 100
-      return {
-        ...record,
-        total,
-        passRate,
-        failRate: total ? 100 - passRate : 0
-      }
-    })
+    const result = safeRecords
+      .filter((record) => record && typeof record === 'object')
+      .map((record, index) => {
+        const passCount =
+          typeof record.passCount === 'number' &&
+          Number.isFinite(record.passCount)
+            ? record.passCount
+            : 0
+        const failCount =
+          typeof record.failCount === 'number' &&
+          Number.isFinite(record.failCount)
+            ? record.failCount
+            : 0
+        const total = passCount + failCount
+        const safeTotal = total || 1
+        const passRate = (passCount / safeTotal) * 100
+        // Ensure examName is always a valid non-empty string for XAxis
+        const examName =
+          record.examName &&
+          typeof record.examName === 'string' &&
+          record.examName.trim()
+            ? record.examName.trim()
+            : `Exam ${index + 1}`
+        const examId =
+          record.examId && typeof record.examId === 'string'
+            ? record.examId
+            : `exam-${index}`
+        return {
+          examId,
+          examName,
+          passCount,
+          failCount,
+          total,
+          passRate,
+          failRate: total ? 100 - passRate : 0
+        }
+      })
+
+    return result
   }, [safeRecords])
 
   const totalStudents = useMemo(() => {
@@ -248,64 +318,66 @@ export const ExamPerformanceChart: React.FC<ExamPerformanceChartProps> = ({
 
       <div className={chartOuterClass}>
         <div className="h-full min-w-full" style={{ width: chartWidth }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 24, right: 16, left: 0, bottom: 16 }}
-              className={isInteractive ? 'cursor-pointer' : undefined}
-            >
-              <CartesianGrid strokeDasharray="4 4" stroke="#E2E8F0" />
-              <XAxis
-                dataKey="examName"
-                interval={0}
-                height={64}
-                tickLine={false}
-                tickMargin={16}
-                allowDuplicatedCategory={false}
-                tick={renderXAxisTick}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={{ fill: '#475569', fontSize: 12 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                content={<TooltipContent />}
-                cursor={{ fill: 'rgba(15, 23, 42, 0.06)' }}
-              />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                iconType="circle"
-                wrapperStyle={{ paddingBottom: 12 }}
-              />
-              <Bar
-                dataKey="passCount"
-                name="Pass"
-                fill={PASS_COLOR}
-                stackId="performance"
-                radius={[0, 0, 0, 0]}
-                maxBarSize={48}
-                onClick={(data) =>
-                  handleDataPointClick(data?.payload as ChartDatum)
-                }
-                className={barClassName}
-              />
-              <Bar
-                dataKey="failCount"
-                name="Fail"
-                fill={FAIL_COLOR}
-                stackId="performance"
-                radius={[6, 6, 0, 0]}
-                maxBarSize={48}
-                onClick={(data) =>
-                  handleDataPointClick(data?.payload as ChartDatum)
-                }
-                className={barClassName}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <ChartErrorBoundary>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 24, right: 16, left: 0, bottom: 16 }}
+                className={isInteractive ? 'cursor-pointer' : undefined}
+              >
+                <CartesianGrid strokeDasharray="4 4" stroke="#E2E8F0" />
+                <XAxis
+                  dataKey="examName"
+                  interval={0}
+                  height={64}
+                  tickLine={false}
+                  tickMargin={16}
+                  tick={renderXAxisTick}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fill: '#475569', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, 'auto']}
+                />
+                <Tooltip
+                  content={<TooltipContent />}
+                  cursor={{ fill: 'rgba(15, 23, 42, 0.06)' }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  iconType="circle"
+                  wrapperStyle={{ paddingBottom: 12 }}
+                />
+                <Bar
+                  dataKey="failCount"
+                  name="Fail"
+                  fill={FAIL_COLOR}
+                  stackId="performance"
+                  radius={[0, 0, 0, 0]}
+                  maxBarSize={48}
+                  onClick={(data) =>
+                    handleDataPointClick(data?.payload as ChartDatum)
+                  }
+                  className={barClassName}
+                />
+                <Bar
+                  dataKey="passCount"
+                  name="Pass"
+                  fill={PASS_COLOR}
+                  stackId="performance"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={48}
+                  onClick={(data) =>
+                    handleDataPointClick(data?.payload as ChartDatum)
+                  }
+                  className={barClassName}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartErrorBoundary>
         </div>
       </div>
     </div>
