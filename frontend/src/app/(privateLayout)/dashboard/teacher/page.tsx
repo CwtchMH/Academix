@@ -53,10 +53,12 @@ export default function TeacherDashboardPage() {
   const normalizedExamRecords = useMemo<ExamPerformanceRecord[]>(() => {
     return (examPerformanceData?.records ?? []).map(
       ({ examId, examName, passCount, failCount }) => ({
-        examId,
-        examName,
-        passCount,
-        failCount
+        examId: examId ?? '',
+        examName: examName ?? '',
+        passCount:
+          typeof passCount === 'number' && !isNaN(passCount) ? passCount : 0,
+        failCount:
+          typeof failCount === 'number' && !isNaN(failCount) ? failCount : 0
       })
     )
   }, [examPerformanceData?.records])

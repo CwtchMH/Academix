@@ -78,8 +78,6 @@ export const useTeacherCourses = (
     url: teacherId ? `/teacher/${teacherId}${queryString}` : '',
     options: {
       enabled: Boolean(teacherId),
-      // Include queryParams in queryKey for proper caching
-      queryKey: ['courses', 'teacher', teacherId, queryParams],
       ...options
     }
   })
