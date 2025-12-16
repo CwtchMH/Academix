@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createCanvas, CanvasRenderingContext2D } from 'canvas';
+import { createCanvas, CanvasRenderingContext2D, loadImage } from 'canvas';
 
 export interface CertificateData {
   studentName: string;
@@ -8,6 +8,7 @@ export interface CertificateData {
   score: number;
   issuedDate: string;
   certificateId?: string;
+  studentImageUrl?: string;
 }
 
 @Injectable()
@@ -38,6 +39,7 @@ export class CertificateImageService {
       this.drawHeader(ctx);
 
       // Vẽ nội dung chính & các điểm nhấn
+      await this.drawStudentImage(ctx, data);
       this.drawMainContent(ctx, data);
       this.drawSeal(ctx, data.score);
       this.drawSignatureArea(ctx, data);
@@ -183,6 +185,100 @@ export class CertificateImageService {
     ctx.fillStyle = '#64748B';
     ctx.font = 'italic 24px Georgia, serif';
     ctx.fillText('This certifies that', this.width / 2, 230);
+  }
+
+  /**
+   * Vẽ ảnh học sinh vào certificate
+   * @param ctx - Canvas context
+   * @param data - Dữ liệu certificate bao gồm studentImageUrl
+   */
+  private async drawStudentImage(
+    ctx: CanvasRenderingContext2D,
+    data: CertificateData,
+  ): Promise<void> {
+    if (!data.studentImageUrl) {
+      this.logger.warn('No student image URL provided, skipping student image');
+      return;
+    }
+
+    try {
+      // Load ảnh từ URL
+      const img = await loadImage(data.studentImageUrl);
+
+      // Vị trí và kích thước ảnh học sinh (góc trên bên trái, bên cạnh header)
+      const imageSize = 120; // Kích thước ảnh vuông
+      const imageX = 100; // Vị trí X (bên trái)
+      const imageY = 100; // Vị trí Y (gần header)
+
+      // Vẽ khung tròn cho ảnh với shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 5;
+
+      // Vẽ background tròn (màu trắng)
+      const centerX = imageX + imageSize / 2;
+      const centerY = imageY + imageSize / 2;
+      const radius = imageSize / 2;
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+
+      // Vẽ border gradient
+      const borderGradient = ctx.createLinearGradient(
+        centerX - radius,
+        centerY - radius,
+        centerX + radius,
+        centerY + radius,
+      );
+      borderGradient.addColorStop(0, '#7C3AED');
+      borderGradient.addColorStop(1, '#2563EB');
+
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = borderGradient;
+      ctx.stroke();
+
+      // Clip để vẽ ảnh trong hình tròn
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 2, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Tính toán để crop và resize ảnh để fit vào hình tròn
+      const aspectRatio = img.width / img.height;
+      let drawWidth = imageSize;
+      let drawHeight = imageSize;
+      let drawX = imageX;
+      let drawY = imageY;
+
+      if (aspectRatio > 1) {
+        // Ảnh ngang hơn
+        drawHeight = imageSize;
+        drawWidth = imageSize * aspectRatio;
+        drawX = imageX - (drawWidth - imageSize) / 2;
+      } else {
+        // Ảnh dọc hơn
+        drawWidth = imageSize;
+        drawHeight = imageSize / aspectRatio;
+        drawY = imageY - (drawHeight - imageSize) / 2;
+      }
+
+      // Vẽ ảnh
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+
+      ctx.restore();
+
+      this.logger.log('Student image drawn successfully');
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(
+        `Failed to load or draw student image: ${errorMessage}. Continuing without student image.`,
+      );
+      // Không throw error, chỉ log warning và tiếp tục tạo certificate không có ảnh
+    }
   }
 
   private drawMainContent(
