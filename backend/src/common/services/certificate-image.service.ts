@@ -9,6 +9,8 @@ export interface CertificateData {
   issuedDate: string;
   certificateId?: string;
   studentImageUrl?: string;
+  identifyNumber?: string;
+  expireDate?: string;
 }
 
 @Injectable()
@@ -76,115 +78,85 @@ export class CertificateImageService {
   }
 
   private drawBackground(ctx: CanvasRenderingContext2D): void {
-    // Gradient background từ tím sang xanh biển tạo cảm giác cao cấp hơn
-    const gradient = ctx.createLinearGradient(0, 0, this.width, this.height);
-    gradient.addColorStop(0, '#E0E7FF');
-    gradient.addColorStop(0.35, '#F5F3FF');
-    gradient.addColorStop(1, '#FFFFFF');
-
-    ctx.fillStyle = gradient;
+    // Clean white background - professional and print-ready
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, this.width, this.height);
-
-    // Thêm shape mềm mại phía sau tạo chiều sâu
-    const abstractGradient = ctx.createLinearGradient(0, 0, this.width, 0);
-    abstractGradient.addColorStop(0, 'rgba(124, 58, 237, 0.12)');
-    abstractGradient.addColorStop(1, 'rgba(37, 99, 235, 0.15)');
-
-    ctx.fillStyle = abstractGradient;
-    ctx.beginPath();
-    ctx.moveTo(0, this.height * 0.25);
-    ctx.bezierCurveTo(
-      this.width * 0.3,
-      this.height * 0.05,
-      this.width * 0.5,
-      this.height * 0.45,
-      this.width,
-      this.height * 0.15,
-    );
-    ctx.lineTo(this.width, 0);
-    ctx.lineTo(0, 0);
-    ctx.closePath();
-    ctx.fill();
   }
 
   private drawBorder(ctx: CanvasRenderingContext2D): void {
-    // Outer border với gradient metallic
-    const borderGradient = ctx.createLinearGradient(40, 0, this.width - 40, 0);
-    borderGradient.addColorStop(0, '#7C3AED');
-    borderGradient.addColorStop(1, '#2563EB');
+    // Elegant gold border - classic and professional
+    const borderMargin = 60;
+    const borderWidth = 4;
 
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = borderGradient;
-    ctx.strokeRect(40, 40, this.width - 80, this.height - 80);
+    // Outer gold border
+    ctx.strokeStyle = '#D4AF37'; // Classic gold color
+    ctx.lineWidth = borderWidth;
+    ctx.strokeRect(
+      borderMargin,
+      borderMargin,
+      this.width - borderMargin * 2,
+      this.height - borderMargin * 2,
+    );
 
-    // Inner glass panel
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+    // Inner decorative border (thinner)
+    const innerMargin = borderMargin + 20;
+    ctx.strokeStyle = '#C9A961'; // Lighter gold
     ctx.lineWidth = 2;
-    ctx.fillRect(70, 70, this.width - 140, this.height - 140);
-    ctx.strokeRect(70, 70, this.width - 140, this.height - 140);
+    ctx.strokeRect(
+      innerMargin,
+      innerMargin,
+      this.width - innerMargin * 2,
+      this.height - innerMargin * 2,
+    );
   }
 
   private drawDecorativeElements(ctx: CanvasRenderingContext2D): void {
-    // Các đường trang trí mềm mại
-    ctx.strokeStyle = 'rgba(99, 102, 241, 0.25)';
-    ctx.lineWidth = 2;
+    // Minimalist decorative lines - elegant and clean
+    const lineY1 = 150;
+    const lineY2 = this.height - 150;
+    const lineMargin = 200;
+
+    // Subtle gold decorative lines
+    ctx.strokeStyle = '#E5D4A1'; // Light gold
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(110, 120);
-    ctx.quadraticCurveTo(this.width / 2, 80, this.width - 110, 120);
+    ctx.moveTo(lineMargin, lineY1);
+    ctx.lineTo(this.width - lineMargin, lineY1);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(110, this.height - 160);
-    ctx.quadraticCurveTo(
-      this.width / 2,
-      this.height - 120,
-      this.width - 110,
-      this.height - 160,
-    );
+    ctx.moveTo(lineMargin, lineY2);
+    ctx.lineTo(this.width - lineMargin, lineY2);
     ctx.stroke();
-
-    // Dải ribbon góc
-    const ribbonGradient = ctx.createLinearGradient(0, 90, 220, 0);
-    ribbonGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
-    ribbonGradient.addColorStop(1, 'rgba(14, 165, 233, 0.25)');
-
-    ctx.fillStyle = ribbonGradient;
-    ctx.beginPath();
-    ctx.moveTo(70, 70);
-    ctx.lineTo(120, 70);
-    ctx.lineTo(90, 150);
-    ctx.lineTo(70, 120);
-    ctx.closePath();
-    ctx.fill();
   }
 
   private drawAccentBar(ctx: CanvasRenderingContext2D): void {
-    const barHeight = 70;
-    const gradient = ctx.createLinearGradient(70, 70, this.width - 70, 70);
-    gradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(70, 70, this.width - 140, barHeight);
+    // Removed accent bar for minimalist design
   }
 
   private drawHeader(ctx: CanvasRenderingContext2D): void {
-    // Title
-    ctx.fillStyle = '#312E81';
-    ctx.font = 'bold 50px "Arial Black", Arial, sans-serif';
+    // Formal typography with serif fonts
+    const centerX = this.width / 2;
+    let currentY = 130;
+
+    // Main title - formal serif font
+    ctx.fillStyle = '#1A1A1A'; // Deep black for professional look
+    ctx.font = 'bold 56px "Times New Roman", "Times", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText('CERTIFICATE OF EXCELLENCE', this.width / 2, 120);
+    ctx.fillText('CERTIFICATE OF COMPLETION', centerX, currentY);
+    currentY += 80;
 
-    // Subtitle & brand
-    ctx.fillStyle = '#6366F1';
-    ctx.font = '22px Arial, sans-serif';
-    ctx.fillText('ACADEMIX INSTITUTE', this.width / 2, 190);
+    // Institution name - elegant serif
+    ctx.fillStyle = '#D4AF37'; // Gold color
+    ctx.font = 'bold 32px "Times New Roman", "Times", serif';
+    ctx.fillText('ACADEMIX INSTITUTE', centerX, currentY);
+    currentY += 50;
 
-    ctx.fillStyle = '#64748B';
-    ctx.font = 'italic 24px Georgia, serif';
-    ctx.fillText('This certifies that', this.width / 2, 230);
+    // Formal certification statement
+    ctx.fillStyle = '#4A4A4A'; // Dark gray
+    ctx.font = 'italic 26px "Georgia", "Times New Roman", serif';
+    ctx.fillText('This is to certify that', centerX, currentY);
   }
 
   /**
@@ -227,18 +199,9 @@ export class CertificateImageService {
       ctx.fillStyle = '#FFFFFF';
       ctx.fill();
 
-      // Vẽ border gradient
-      const borderGradient = ctx.createLinearGradient(
-        centerX - radius,
-        centerY - radius,
-        centerX + radius,
-        centerY + radius,
-      );
-      borderGradient.addColorStop(0, '#7C3AED');
-      borderGradient.addColorStop(1, '#2563EB');
-
+      // Gold border for student image
       ctx.lineWidth = 4;
-      ctx.strokeStyle = borderGradient;
+      ctx.strokeStyle = '#D4AF37'; // Classic gold
       ctx.stroke();
 
       // Clip để vẽ ảnh trong hình tròn
@@ -286,115 +249,111 @@ export class CertificateImageService {
     data: CertificateData,
   ): void {
     const centerX = this.width / 2;
-    let currentY = 300;
+    let currentY = 280;
 
-    // Student name
-    ctx.fillStyle = '#1E3A8A';
-    ctx.font = 'bold 54px "Times New Roman", serif';
+    // Student name - prominent formal serif
+    ctx.fillStyle = '#1A1A1A';
+    ctx.font = 'bold 58px "Times New Roman", "Times", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
     ctx.fillText(data.studentName, centerX, currentY);
-    currentY += 90;
+    currentY += 100;
 
-    // Course completion text
-    ctx.fillStyle = '#475569';
-    ctx.font = '28px Arial, sans-serif';
+    // Course completion text - formal serif
+    ctx.fillStyle = '#4A4A4A';
+    ctx.font = '28px "Georgia", "Times New Roman", serif';
     ctx.fillText('has successfully completed the course', centerX, currentY);
-    currentY += 50;
+    currentY += 60;
 
-    // Course name
-    ctx.fillStyle = '#312E81';
-    ctx.font = 'bold 38px Arial, sans-serif';
-    ctx.fillText(data.courseName, centerX, currentY);
+    // Course name - bold serif
+    ctx.fillStyle = '#2C2C2C';
+    ctx.font = 'bold 42px "Times New Roman", "Times", serif';
+    ctx.fillText(`"${data.courseName}"`, centerX, currentY);
     currentY += 70;
 
-    // Exam title
-    ctx.fillStyle = '#475569';
-    ctx.font = '24px Arial, sans-serif';
-    ctx.fillText(`Exam: ${data.examTitle}`, centerX, currentY);
+    // Exam title - formal serif
+    ctx.fillStyle = '#5A5A5A';
+    ctx.font = '24px "Georgia", "Times New Roman", serif';
+    ctx.fillText(`Examination: ${data.examTitle}`, centerX, currentY);
     currentY += 50;
 
-    // Score
-    const scorePanelX = centerX - 200;
-    const scorePanelWidth = 400;
-    const scorePanelHeight = 70;
+    // Identification Number - if available
+    if (data.identifyNumber) {
+      ctx.fillStyle = '#4A4A4A';
+      ctx.font = '22px "Georgia", "Times New Roman", serif';
+      ctx.fillText(
+        `Identification Number: ${data.identifyNumber}`,
+        centerX,
+        currentY,
+      );
+      currentY += 50;
+    }
 
-    const scoreGradient = ctx.createLinearGradient(
-      scorePanelX,
-      currentY,
-      scorePanelX + scorePanelWidth,
-      currentY,
-    );
-    scoreGradient.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
-    scoreGradient.addColorStop(1, 'rgba(59, 130, 246, 0.15)');
+    // Expire date - if available
+    if (data.expireDate) {
+      ctx.fillStyle = '#5A5A5A';
+      ctx.font = '20px "Georgia", "Times New Roman", serif';
+      ctx.fillText(`Valid until: ${data.expireDate}`, centerX, currentY);
+      currentY += 50;
+    }
 
-    ctx.fillStyle = scoreGradient;
-    ctx.fillRect(scorePanelX, currentY - 45, scorePanelWidth, scorePanelHeight);
-
-    ctx.strokeStyle = 'rgba(16, 185, 129, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(
-      scorePanelX,
-      currentY - 45,
-      scorePanelWidth,
-      scorePanelHeight,
-    );
-
-    ctx.fillStyle = '#059669';
-    ctx.font = 'bold 30px Arial, sans-serif';
+    // Score - elegant presentation
+    ctx.fillStyle = '#2C2C2C';
+    ctx.font = '26px "Georgia", "Times New Roman", serif';
     const scoreText = `Achieved Score: ${data.score.toFixed(1)}%`;
-    ctx.fillText(scoreText, centerX, currentY + 5);
+    ctx.fillText(scoreText, centerX, currentY);
   }
 
   private drawSeal(ctx: CanvasRenderingContext2D, score: number): void {
-    const sealX = this.width - 220;
-    const sealY = 260;
+    const sealX = this.width - 200;
+    const sealY = this.height / 2 - 50;
+    const sealRadius = 75;
 
     ctx.save();
-    ctx.shadowColor = 'rgba(15, 23, 42, 0.25)';
-    ctx.shadowBlur = 20;
 
-    // Outer glow
+    // Gold seal with elegant shadow
+    ctx.shadowColor = 'rgba(212, 175, 55, 0.3)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 5;
+
+    // Outer gold ring
     ctx.beginPath();
-    ctx.arc(sealX, sealY, 90, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(249, 115, 22, 0.18)';
+    ctx.arc(sealX, sealY, sealRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFF9E6'; // Light cream background
     ctx.fill();
-
-    // Seal body
-    ctx.shadowBlur = 0;
-    const sealGradient = ctx.createLinearGradient(
-      sealX - 60,
-      sealY,
-      sealX + 60,
-      sealY,
-    );
-    sealGradient.addColorStop(0, '#FDBA74');
-    sealGradient.addColorStop(1, '#FB923C');
-
-    ctx.beginPath();
-    ctx.arc(sealX, sealY, 70, 0, Math.PI * 2);
-    ctx.fillStyle = '#FFF7ED';
-    ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = sealGradient;
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#D4AF37'; // Classic gold
     ctx.stroke();
 
-    // Inner pattern
-    ctx.setLineDash([12, 6]);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = sealGradient;
+    // Inner decorative ring
     ctx.beginPath();
-    ctx.arc(sealX, sealY, 50, 0, Math.PI * 2);
+    ctx.arc(sealX, sealY, sealRadius - 15, 0, Math.PI * 2);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#C9A961'; // Lighter gold
+    ctx.stroke();
+
+    // Decorative pattern - dashed circle
+    ctx.setLineDash([8, 4]);
+    ctx.beginPath();
+    ctx.arc(sealX, sealY, sealRadius - 25, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#D4AF37';
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = '#F97316';
-    ctx.font = 'bold 34px Arial, sans-serif';
+    // Score text - formal serif
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#1A1A1A';
+    ctx.font = 'bold 36px "Times New Roman", "Times", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${score.toFixed(0)}%`, sealX, sealY);
+    ctx.fillText(`${score.toFixed(0)}%`, sealX, sealY - 8);
 
-    ctx.fillStyle = '#FB923C';
-    ctx.font = 'bold 14px Arial, sans-serif';
-    ctx.fillText('EXCELLENCE', sealX, sealY + 28);
+    // Excellence label - formal serif
+    ctx.fillStyle = '#8B6914'; // Dark gold
+    ctx.font = 'bold 16px "Times New Roman", "Times", serif';
+    ctx.fillText('EXCELLENCE', sealX, sealY + 20);
 
     ctx.restore();
   }
@@ -403,39 +362,33 @@ export class CertificateImageService {
     ctx: CanvasRenderingContext2D,
     data: CertificateData,
   ): void {
-    const areaY = this.height - 230;
-    const areaHeight = 110;
-    const areaWidth = this.width - 180;
-    const areaX = 90;
+    const areaY = this.height - 200;
+    const signatureY = areaY + 40;
+    const leftX = 120;
+    const rightX = this.width - 120;
+    const lineLength = 200;
 
-    ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
-    ctx.fillRect(areaX, areaY, areaWidth, areaHeight);
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.6)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(areaX, areaY, areaWidth, areaHeight);
-
-    // Signature line
-    const lineY = areaY + areaHeight - 40;
-    ctx.strokeStyle = '#94A3B8';
+    // Left signature area
+    ctx.strokeStyle = '#8B6914'; // Dark gold
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(areaX + 60, lineY);
-    ctx.lineTo(areaX + areaWidth / 2 - 20, lineY);
+    ctx.moveTo(leftX, signatureY);
+    ctx.lineTo(leftX + lineLength, signatureY);
     ctx.stroke();
 
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#334155';
-    ctx.font = '20px Arial, sans-serif';
-    ctx.fillText('Authorized Signature', areaX + 60, lineY + 30);
+    ctx.fillStyle = '#4A4A4A';
+    ctx.font = '18px "Georgia", "Times New Roman", serif';
+    ctx.fillText('Authorized Signature', leftX, signatureY + 25);
 
+    // Right side - Certificate ID
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#475569';
-    ctx.font = '18px Arial, sans-serif';
-    ctx.fillText(
-      data.certificateId ? `ID: ${data.certificateId}` : 'Academix Platform',
-      areaX + areaWidth - 60,
-      lineY + 30,
-    );
+    ctx.fillStyle = '#5A5A5A';
+    ctx.font = '16px "Georgia", "Times New Roman", serif';
+    const certIdText = data.certificateId
+      ? `Certificate ID: ${data.certificateId}`
+      : 'Academix Education Platform';
+    ctx.fillText(certIdText, rightX, signatureY + 25);
   }
 
   private drawFooter(
@@ -443,15 +396,15 @@ export class CertificateImageService {
     data: CertificateData,
   ): void {
     const centerX = this.width / 2;
-    const footerY = this.height - 80;
+    const footerY = this.height - 70;
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#475569';
-    ctx.font = '20px Arial, sans-serif';
+    ctx.fillStyle = '#5A5A5A';
+    ctx.font = '20px "Georgia", "Times New Roman", serif';
     ctx.fillText(`Issued on ${data.issuedDate}`, centerX, footerY);
 
-    ctx.fillStyle = '#312E81';
-    ctx.font = 'bold 26px Arial, sans-serif';
-    ctx.fillText('Academix Education Platform', centerX, footerY + 40);
+    ctx.fillStyle = '#D4AF37'; // Gold color
+    ctx.font = 'bold 24px "Times New Roman", "Times", serif';
+    ctx.fillText('Academix Education Platform', centerX, footerY + 35);
   }
 }
