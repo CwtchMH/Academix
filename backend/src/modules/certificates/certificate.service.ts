@@ -71,6 +71,10 @@ export class CertificateService {
     const student = await this.userModel.findById(dto.studentId);
     if (!student) throw new NotFoundException('Student not found');
 
+    const examEndDate = exam.endTime ? new Date(exam.endTime) : new Date();
+    const outdateTime = new Date(examEndDate);
+    outdateTime.setFullYear(examEndDate.getFullYear() + 2);
+
     const certificate = new this.certificateModel({
       studentId: new Types.ObjectId(dto.studentId),
       courseId: exam.courseId,
@@ -80,7 +84,7 @@ export class CertificateService {
       ipfsHash: undefined,
       transactionHash: undefined,
       issuedAt: new Date(),
-      outdateTime: new Date(),
+      outdateTime,
     });
 
     const savedCertificate = await certificate.save();

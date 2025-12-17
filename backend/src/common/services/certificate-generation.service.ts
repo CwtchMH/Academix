@@ -29,6 +29,8 @@ export interface CertificateGenerationResult {
     score: number;
     issuedDate: string;
     certificateId?: string;
+    identifyNumber?: string;
+    expireDate?: string;
   };
 }
 
@@ -76,6 +78,8 @@ export class CertificateGenerationService {
           issuedDate: certificateData.issuedDate,
           certificateId: certificateId,
           studentImageUrl: certificateData.studentImageUrl,
+          identifyNumber: certificateData.identifyNumber,
+          expireDate: certificateData.expireDate,
         });
 
       // 3. Upload ảnh lên Pinata
@@ -116,6 +120,14 @@ export class CertificateGenerationService {
             trait_type: 'Issued Date',
             value: certificateData.issuedDate,
           },
+          {
+            trait_type: 'Identification Number',
+            value: certificateData.identifyNumber ?? '',
+          },
+          {
+            trait_type: 'Expire Date',
+            value: certificateData.expireDate ?? '',
+          },
         ],
         studentName: certificateData.studentName,
         studentEmail: certificateData.studentEmail,
@@ -124,6 +136,8 @@ export class CertificateGenerationService {
         score: certificateData.score,
         issuedDate: certificateData.issuedDate,
         certificateId: certificateId,
+        identifyNumber: certificateData.identifyNumber,
+        expireDate: certificateData.expireDate,
         issuer: 'Academix Education Platform',
       };
 
@@ -155,6 +169,8 @@ export class CertificateGenerationService {
           score: certificateData.score,
           issuedDate: certificateData.issuedDate,
           certificateId: certificateId,
+          identifyNumber: certificateData.identifyNumber,
+          expireDate: certificateData.expireDate,
         },
       };
     } catch (error: unknown) {
@@ -181,6 +197,8 @@ export class CertificateGenerationService {
     score: number;
     issuedDate: string;
     studentImageUrl?: string;
+    identifyNumber?: string;
+    expireDate?: string;
   }> {
     // Query certificate với populate các thông tin liên quan
     const certificate = await this.certificateModel
@@ -221,6 +239,16 @@ export class CertificateGenerationService {
           day: 'numeric',
         });
 
+    // Tính expireDate = ngày thi (endTime) + 2 năm
+    const examEndDate = exam.endTime ? new Date(exam.endTime) : new Date();
+    const expireDateObj = new Date(examEndDate);
+    expireDateObj.setFullYear(examEndDate.getFullYear() + 2);
+    const expireDate = expireDateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
     return {
       studentName: student.fullName || student.username,
       studentEmail: student.email,
@@ -229,6 +257,8 @@ export class CertificateGenerationService {
       score: submission.score,
       issuedDate,
       studentImageUrl: student.imageUrl,
+      identifyNumber: student.citizenId,
+      expireDate,
     };
   }
 }
