@@ -6,6 +6,7 @@ export interface IUser {
   fullName?: string;
   dateOfBirth?: Date;
   imageUrl?: string;
+  citizenId?: string;
   role: 'student' | 'teacher' | 'admin';
   walletAddress?: string;
   refreshTokenHash?: string;
@@ -21,6 +22,7 @@ export interface IUserProfile {
   fullName?: string;
   dateOfBirth?: Date;
   imageUrl?: string;
+  citizenId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -335,7 +335,8 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
-    const { fullName, email, dateOfBirth, imageUrl } = updateProfileDto;
+    const { fullName, email, dateOfBirth, imageUrl, citizenId } =
+      updateProfileDto;
 
     // Check if email is being updated and if it already exists
     if (email) {
@@ -354,12 +355,14 @@ export class AuthService {
       email: string;
       dateOfBirth: Date;
       imageUrl: string;
+      citizenId: string;
     }> = {};
     if (fullName !== undefined) updateData.fullName = fullName;
     if (email !== undefined) updateData.email = email;
     if (dateOfBirth !== undefined)
       updateData.dateOfBirth = new Date(dateOfBirth);
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+    if (citizenId !== undefined) updateData.citizenId = citizenId;
     // Update user profile
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
@@ -392,6 +395,7 @@ export class AuthService {
         fullName: user.fullName ?? null,
         dateOfBirth: user.dateOfBirth ?? null,
         imageUrl: user.imageUrl ?? null,
+        citizenId: user.citizenId ?? null,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -439,6 +443,7 @@ export class AuthService {
       fullName: user.fullName ?? null,
       dateOfBirth: user.dateOfBirth ?? undefined,
       imageUrl: user.imageUrl ?? undefined,
+      citizenId: user.citizenId ?? undefined,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -679,9 +684,11 @@ export class AuthService {
     // Tách mime type và data
     const parts = imageBase64.match(/^data:(image\/(?:jpeg|png));base64,(.*)$/);
     if (!parts || parts.length !== 3) {
-      throw new BadRequestException('Invalid image format. Must be data URL (jpeg/png).');
+      throw new BadRequestException(
+        'Invalid image format. Must be data URL (jpeg/png).',
+      );
     }
-    
+
     const mimeType = parts[1]; // "image/jpeg"
     const base64Data = parts[2]; // "..."
 
@@ -695,7 +702,7 @@ export class AuthService {
 
     const systemPrompt =
       "You are an AI passport photo checker. Analyze *the user's image. Determine if it is a valid profile picture for a secure exam system. Check for: 1. Only one clear human face. 2. Face is centered. 3. Face is looking forward. 4. No obstructions (sunglasses, masks). 5. Image is clear (not blurry).";
-    
+
     // Ask Gemini to return JSON
     const jsonSchema = {
       type: 'OBJECT',
@@ -757,7 +764,10 @@ export class AuthService {
       }
     } catch (error) {
       if (error instanceof BadRequestException) throw error; // Ném lại lỗi 400
-      this.logger.error('Gemini API call failed', error.response?.data || error.message);
+      this.logger.error(
+        'Gemini API call failed',
+        error.response?.data || error.message,
+      );
       throw new InternalServerErrorException('AI validation service failed.');
     }
   }

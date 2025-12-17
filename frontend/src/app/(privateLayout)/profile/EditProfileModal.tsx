@@ -41,6 +41,13 @@ const editProfileSchema = yup.object({
       }
       return age >= 16;
     }),
+  citizenId: yup
+    .string()
+    .notRequired()
+    .test("citizenId", "Citizen ID must be 9 or 12 digits", function (value) {
+      if (!value || value === "") return true; // Optional field
+      return /^[0-9]{9}$|^[0-9]{12}$/.test(value);
+    }),
 });
 
 const EditProfileModal = ({
@@ -57,13 +64,14 @@ const EditProfileModal = ({
     reset,
     formState: { errors, isDirty },
   } = useForm<EditProfileFormData>({
-    resolver: yupResolver(editProfileSchema),
+    resolver: yupResolver(editProfileSchema) as any,
     defaultValues: {
       fullName: user?.fullName || "",
       email: user?.email || "",
       dateOfBirth: user?.dateOfBirth
         ? dayjs(user.dateOfBirth).format("YYYY-MM-DD")
         : "",
+      citizenId: user?.citizenId,
     },
   });
 
@@ -75,6 +83,7 @@ const EditProfileModal = ({
         fullName: data.fullName,
         email: data.email,
         dateOfBirth: data.dateOfBirth,
+        citizenId: data.citizenId || undefined,
       });
 
       if (response.success) {
@@ -168,6 +177,25 @@ const EditProfileModal = ({
                   size="large"
                   style={{ width: "100%" }}
                   format="YYYY-MM-DD"
+                />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Citizen ID"
+            validateStatus={errors.citizenId ? "error" : ""}
+            help={errors.citizenId?.message}
+          >
+            <Controller
+              name="citizenId"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Enter your citizen ID (9 or 12 digits)"
+                  size="large"
+                  maxLength={12}
                 />
               )}
             />

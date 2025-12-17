@@ -75,6 +75,7 @@ export class CertificateGenerationService {
           score: certificateData.score,
           issuedDate: certificateData.issuedDate,
           certificateId: certificateId,
+          studentImageUrl: certificateData.studentImageUrl,
         });
 
       // 3. Upload ảnh lên Pinata
@@ -179,6 +180,7 @@ export class CertificateGenerationService {
     examTitle: string;
     score: number;
     issuedDate: string;
+    studentImageUrl?: string;
   }> {
     // Query certificate với populate các thông tin liên quan
     const certificate = await this.certificateModel
@@ -226,6 +228,7 @@ export class CertificateGenerationService {
       examTitle: exam.title,
       score: submission.score,
       issuedDate,
+      studentImageUrl: student.imageUrl,
     };
   }
 }
