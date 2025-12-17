@@ -23,6 +23,7 @@ export interface UpdateProfileRequest {
   fullName?: string;
   email?: string;
   dateOfBirth?: string;
+  citizenId?: string;
   imageUrl?: string;
 }
 

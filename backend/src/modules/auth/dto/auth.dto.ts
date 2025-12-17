@@ -118,6 +118,16 @@ export class UpdateProfileDto {
   @IsString()
   @MinLength(1)
   imageUrl?: string;
+
+  @ApiProperty({
+    example: '123456789',
+    description: 'National ID / Citizen ID number (CMND/CCCD)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  citizenId?: string;
 }
 
 export class VerifyFaceDto {

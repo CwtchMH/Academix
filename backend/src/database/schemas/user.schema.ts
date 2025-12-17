@@ -23,6 +23,9 @@ export class User {
   @Prop({ type: String, trim: true })
   imageUrl?: string;
 
+  @Prop({ type: String, trim: true, required: false })
+  citizenId?: string;
+
   @Prop({
     type: String,
     enum: ['student', 'teacher', 'admin'],

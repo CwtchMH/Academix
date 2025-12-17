@@ -8,6 +8,7 @@ export interface User {
   email: string;
   dateOfBirth?: string;
   imageUrl?: string;
+  citizenId?: string;
   role: "student" | "teacher";
   createdAt: string;
   updatedAt: string;

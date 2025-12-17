@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useAuth } from '@/stores/auth'
+import { useAuth } from "@/stores/auth";
 import {
   Card,
   Descriptions,
@@ -9,35 +9,35 @@ import {
   Button,
   Space,
   message,
-  Avatar
-} from 'antd'
+  Avatar,
+} from "antd";
 import {
   UserOutlined,
   MailOutlined,
   IdcardOutlined,
   CalendarOutlined,
-  CameraOutlined
-} from '@ant-design/icons'
-import { useState } from 'react'
-import EditProfileModal from './EditProfileModal'
-import ChangePasswordModal from './ChangePasswordModal'
-import UploadImage from './UploadImage'
+  CameraOutlined,
+} from "@ant-design/icons";
+import { useState } from "react";
+import EditProfileModal from "./EditProfileModal";
+import ChangePasswordModal from "./ChangePasswordModal";
+import UploadImage from "./UploadImage";
 
 export default function ProfilePage() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading } = useAuth();
   const [isOpenEditProfileModal, setIsOpenEditProfileModal] =
-    useState<boolean>(false)
+    useState<boolean>(false);
   const [isOpenChangePasswordModal, setIsOpenChangePasswordModal] =
-    useState<boolean>(false)
+    useState<boolean>(false);
   const [isOpenUploadImageModal, setIsOpenUploadImageModal] =
-    useState<boolean>(false)
-  const [messageApi, contextHolder] = message.useMessage()
+    useState<boolean>(false);
+  const [messageApi, contextHolder] = message.useMessage();
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Spin size="large"></Spin>
       </div>
-    )
+    );
   }
 
   if (!user) {
@@ -52,7 +52,7 @@ export default function ProfilePage() {
           </Space>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -151,7 +151,7 @@ export default function ProfilePage() {
                   </Space>
                 }
               >
-                {user?.fullName || '--'}
+                {user?.fullName || "--"}
               </Descriptions.Item>
 
               <Descriptions.Item
@@ -164,7 +164,7 @@ export default function ProfilePage() {
               >
                 {user?.dateOfBirth
                   ? new Date(user.dateOfBirth).toLocaleDateString()
-                  : '--'}
+                  : "--"}
               </Descriptions.Item>
 
               <Descriptions.Item
@@ -182,12 +182,23 @@ export default function ProfilePage() {
                 label={
                   <Space>
                     <IdcardOutlined />
+                    <span>Citizen ID</span>
+                  </Space>
+                }
+              >
+                {user?.citizenId || "--"}
+              </Descriptions.Item>
+
+              <Descriptions.Item
+                label={
+                  <Space>
+                    <IdcardOutlined />
                     <span>Role</span>
                   </Space>
                 }
               >
-                <Tag color={user?.role === 'teacher' ? 'blue' : 'green'}>
-                  {user?.role === 'teacher' ? 'Teacher' : 'Student'}
+                <Tag color={user?.role === "teacher" ? "blue" : "green"}>
+                  {user?.role === "teacher" ? "Teacher" : "Student"}
                 </Tag>
               </Descriptions.Item>
             </Descriptions>
@@ -207,11 +218,11 @@ export default function ProfilePage() {
             isOpen={isOpenChangePasswordModal}
             onClose={() => setIsOpenChangePasswordModal(false)}
             onSuccess={() => {
-              console.log('Password changed successfully!')
-              messageApi.success('Password changed successfully!')
+              console.log("Password changed successfully!");
+              messageApi.success("Password changed successfully!");
             }}
             onError={(error) => {
-              messageApi.error(error)
+              messageApi.error(error);
             }}
           />
         )}
@@ -221,11 +232,11 @@ export default function ProfilePage() {
             onClose={() => setIsOpenUploadImageModal(false)}
             currentImageUrl={user?.imageUrl}
             onUploadSuccess={() => {
-              messageApi.success('Avatar updated successfully!')
+              messageApi.success("Avatar updated successfully!");
             }}
           />
         )}
       </div>
     </>
-  )
+  );
 }
