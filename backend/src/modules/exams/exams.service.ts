@@ -178,12 +178,17 @@ export class ExamsService {
     const {
       search = '',
       status = ExamStatusFilter.All,
+      courseId,
       page = 1,
       limit = 10,
     } = queryDto ?? {};
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: Record<string, any> = {};
+
+    // Build list of course IDs to filter by
+    let courseIds: Types.ObjectId[] = [];
+    let courseMap: Map<string, string> = new Map(); // Map courseId -> courseName
 
     // If teacherId is provided, filter exams by courses owned by that teacher
     if (teacherId) {
@@ -194,12 +199,56 @@ export class ExamsService {
       // Find all courses owned by this teacher
       const courses = await this.courseModel
         .find({ teacherId: new Types.ObjectId(teacherId) })
-        .select('_id')
+        .select('_id courseName')
         .exec();
 
-      const courseIds = courses.map((course) => course._id);
+      courseIds = courses.map((course) => course._id as Types.ObjectId);
 
-      // Filter exams by these course IDs
+      // Build course name map for response
+      courses.forEach((course) => {
+        courseMap.set(String(course._id), course.courseName);
+      });
+    }
+
+    // Apply course filter if specific courseId is provided (not 'all')
+    if (courseId && courseId !== 'all') {
+      if (!Types.ObjectId.isValid(courseId)) {
+        throw new BadRequestException('Invalid course ID');
+      }
+
+      const courseObjectId = new Types.ObjectId(courseId);
+
+      // If teacherId was provided, verify the course belongs to teacher
+      if (teacherId && !courseIds.some((id) => id.equals(courseObjectId))) {
+        // Course doesn't belong to this teacher, return empty result
+        return {
+          exams: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+        };
+      }
+
+      // Filter by specific course
+      query.courseId = courseObjectId;
+
+      // If we don't have the course name yet, fetch it
+      if (!courseMap.has(courseId)) {
+        const course = await this.courseModel
+          .findById(courseObjectId)
+          .select('courseName')
+          .exec();
+        if (course) {
+          courseMap.set(courseId, course.courseName);
+        }
+      }
+    } else if (teacherId && courseIds.length > 0) {
+      // Filter exams by all teacher's course IDs
       query.courseId = { $in: courseIds };
     }
 
@@ -229,11 +278,29 @@ export class ExamsService {
         startTime: 1,
         endTime: 1,
         status: 1,
+        courseId: 1, // Include courseId for mapping
       })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    // If we don't have course info yet, fetch it for all exams
+    const missingCourseIds = exams
+      .map((exam) => String(exam.courseId))
+      .filter((id) => !courseMap.has(id));
+
+    if (missingCourseIds.length > 0) {
+      const uniqueIds = [...new Set(missingCourseIds)];
+      const courses = await this.courseModel
+        .find({ _id: { $in: uniqueIds.map((id) => new Types.ObjectId(id)) } })
+        .select('_id courseName')
+        .exec();
+
+      courses.forEach((course) => {
+        courseMap.set(String(course._id), course.courseName);
+      });
+    }
 
     const totalPages = Math.ceil(total / limit);
 
@@ -246,6 +313,7 @@ export class ExamsService {
       hasPrevPage: page > 1,
     };
 
+    // Map exams to summary DTOs including course information
     const examSummaries: ExamSummaryDto[] = exams.map((exam) => ({
       id: String(exam._id),
       publicId: exam.publicId,
@@ -253,6 +321,8 @@ export class ExamsService {
       status: computeExamStatus(now, exam.startTime, exam.endTime, exam.status),
       startTime: exam.startTime,
       endTime: exam.endTime,
+      courseId: String(exam.courseId),
+      courseName: courseMap.get(String(exam.courseId)) ?? 'Unknown Course',
     }));
 
     return { exams: examSummaries, pagination };

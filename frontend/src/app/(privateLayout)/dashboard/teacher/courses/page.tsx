@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { App, Modal, Spin } from 'antd'
+import { useRouter } from 'next/navigation'
 import { Button, Icon, Input } from '@/components/atoms'
 import { CourseCard } from '@/components/molecules'
 import {
@@ -12,6 +13,7 @@ import {
   useCreateCourse,
   useDeleteCourse,
   useTeacherCourses,
+  useUpdateCourseName,
   type TeacherCourseEntity
 } from '@/services/api/course.api'
 import { useAuth } from '@/stores/auth'
@@ -19,6 +21,7 @@ import { useDebounce } from '@/hooks'
 
 const CoursesPage: React.FC = () => {
   const { message } = App.useApp()
+  const router = useRouter()
   const { user, getUser } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearch = useDebounce(searchTerm, 300)
@@ -32,8 +35,15 @@ const CoursesPage: React.FC = () => {
   const [coursePendingDeletion, setCoursePendingDeletion] =
     useState<TeacherCourseEntity | null>(null)
 
+  // State for edit course name modal
+  const [courseToEdit, setCourseToEdit] = useState<TeacherCourseEntity | null>(
+    null
+  )
+  const [editCourseName, setEditCourseName] = useState('')
+
   const createCourseMutation = useCreateCourse()
   const deleteCourseMutation = useDeleteCourse()
+  const updateCourseNameMutation = useUpdateCourseName()
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useTeacherCourses(
@@ -79,6 +89,63 @@ const CoursesPage: React.FC = () => {
       return
     }
     setCoursePendingDeletion(null)
+  }
+
+  /**
+   * Open edit modal with current course data
+   */
+  const handleRequestEditCourse = (course: TeacherCourseEntity) => {
+    setCourseToEdit(course)
+    setEditCourseName(course.courseName)
+  }
+
+  /**
+   * Close edit modal and reset state
+   */
+  const handleCancelEditCourse = () => {
+    if (updateCourseNameMutation.isPending) {
+      return
+    }
+    setCourseToEdit(null)
+    setEditCourseName('')
+  }
+
+  /**
+   * Submit updated course name to API
+   */
+  const handleConfirmEditCourse = async () => {
+    if (!courseToEdit || !editCourseName.trim()) {
+      message.error('Course name cannot be empty')
+      return
+    }
+
+    try {
+      const response = await updateCourseNameMutation.mutateAsync({
+        courseId: courseToEdit.id,
+        data: { courseName: editCourseName.trim() }
+      })
+
+      if (!response?.success) {
+        message.error(response?.message ?? 'Failed to update course name')
+        return
+      }
+
+      message.success(response.message ?? 'Course name updated successfully')
+      setCourseToEdit(null)
+      setEditCourseName('')
+      await refetch()
+    } catch (error) {
+      console.error('Update course name failed:', error)
+      message.error('Failed to update course name')
+    }
+  }
+
+  /**
+   * Navigate to exams page with course filter applied
+   * Uses URL query params to pass courseId for filtering
+   */
+  const handleViewCourseExams = (courseId: string) => {
+    router.push(`/dashboard/teacher/exams?courseId=${courseId}`)
   }
 
   const handleConfirmDeleteCourse = async () => {
@@ -218,6 +285,12 @@ const CoursesPage: React.FC = () => {
                   teacherId={course.teacherId}
                   teacherName={course.teacherName}
                   enrollmentCount={course.enrollmentCount}
+                  onClick={() => handleViewCourseExams(course.id)}
+                  onEdit={() => handleRequestEditCourse(course)}
+                  isEditing={
+                    updateCourseNameMutation.isPending &&
+                    courseToEdit?.id === course.id
+                  }
                   onDelete={() => handleRequestDeleteCourse(course)}
                   isDeleting={
                     deleteCourseMutation.isPending &&
@@ -303,6 +376,37 @@ const CoursesPage: React.FC = () => {
           <Button variant="primary" fullWidth onClick={handleSuccessModalClose}>
             Close
           </Button>
+        </div>
+      </Modal>
+
+      {/* Edit Course Name Modal */}
+      <Modal
+        open={Boolean(courseToEdit)}
+        title="Edit Course Name"
+        okText="Save"
+        cancelText="Cancel"
+        centered
+        onOk={handleConfirmEditCourse}
+        onCancel={handleCancelEditCourse}
+        confirmLoading={updateCourseNameMutation.isPending}
+        maskClosable={false}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Update the course name below and click Save to apply changes.
+          </p>
+          {courseToEdit ? (
+            <div className="space-y-3">
+              <p className="font-mono text-xs text-slate-500">
+                Course ID: {courseToEdit.publicId}
+              </p>
+              <Input
+                placeholder="Enter new course name"
+                value={editCourseName}
+                onChange={setEditCourseName}
+              />
+            </div>
+          ) : null}
         </div>
       </Modal>
     </React.Fragment>

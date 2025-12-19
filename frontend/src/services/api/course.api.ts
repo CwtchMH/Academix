@@ -1,4 +1,8 @@
-import { type UseQueryOptions } from '@tanstack/react-query'
+import {
+  useMutation,
+  type UseMutationOptions,
+  type UseQueryOptions
+} from '@tanstack/react-query'
 import { CourseService } from '../index'
 
 export interface CreateCourseRequest {
@@ -46,6 +50,32 @@ export interface TeacherCoursesQueryParams {
 }
 
 /**
+ * Update course name request interface
+ */
+export interface UpdateCourseNameRequest {
+  courseName: string
+}
+
+/**
+ * Update course name response interface
+ */
+export interface UpdateCourseNameResponse {
+  success: boolean
+  data: {
+    course: TeacherCourseEntity
+  }
+  message: string
+}
+
+/**
+ * Variables for update course name mutation
+ */
+export interface UpdateCourseNameVariables {
+  courseId: string
+  data: UpdateCourseNameRequest
+}
+
+/**
  * Create a new course
  * POST /courses
  */
@@ -86,5 +116,31 @@ export const useTeacherCourses = (
 export const useDeleteCourse = () => {
   return CourseService.useDelete<DeleteCourseResponse>({
     url: '/delete'
+  })
+}
+
+/**
+ * Update course name
+ * PATCH /courses/:courseId/name
+ */
+export const useUpdateCourseName = (
+  options?: Omit<
+    UseMutationOptions<
+      UpdateCourseNameResponse,
+      unknown,
+      UpdateCourseNameVariables,
+      unknown
+    >,
+    'mutationFn'
+  >
+) => {
+  return useMutation({
+    mutationFn: async ({ courseId, data }: UpdateCourseNameVariables) => {
+      return CourseService.apiMethod.patch<UpdateCourseNameResponse>({
+        url: `/${courseId}/name`,
+        data
+      })
+    },
+    ...options
   })
 }

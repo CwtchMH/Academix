@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ExamSummaryDto {
   @ApiProperty({
@@ -37,4 +37,22 @@ export class ExamSummaryDto {
     example: '2025-11-12T02:30:00.000Z',
   })
   endTime: Date;
+
+  /**
+   * Course ID associated with the exam
+   */
+  @ApiPropertyOptional({
+    description: 'Course ID associated with this exam',
+    example: '652fd6a7e5a69c0012345678',
+  })
+  courseId?: string;
+
+  /**
+   * Course name for display purposes
+   */
+  @ApiPropertyOptional({
+    description: 'Name of the course associated with this exam',
+    example: 'Algebra Basics',
+  })
+  courseName?: string;
 }

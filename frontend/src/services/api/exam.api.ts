@@ -61,6 +61,10 @@ export interface ExamSummaryEntity {
   status: string
   startTime: string
   endTime: string
+  /** Course ID associated with this exam */
+  courseId?: string
+  /** Course name for display purposes */
+  courseName?: string
 }
 
 export interface ExamResultEntity {
@@ -205,6 +209,8 @@ export type ExamStatusFilter = 'all' | 'scheduled' | 'active' | 'completed'
 export interface ExamsQueryParams {
   search?: string
   status?: ExamStatusFilter
+  /** Filter by course ID. Use 'all' to show exams from all courses */
+  courseId?: string
   page?: number
   limit?: number
 }
@@ -239,6 +245,9 @@ export const useExams = (
     if (params.search) searchParams.set('search', params.search)
     if (params.status && params.status !== 'all')
       searchParams.set('status', params.status)
+    // Add courseId filter - 'all' means no filter applied
+    if (params.courseId && params.courseId !== 'all')
+      searchParams.set('courseId', params.courseId)
     if (params.page) searchParams.set('page', String(params.page))
     if (params.limit) searchParams.set('limit', String(params.limit))
     const queryString = searchParams.toString()

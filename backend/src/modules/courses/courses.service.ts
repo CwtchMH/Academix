@@ -11,7 +11,11 @@ import {
   Enrollment,
   EnrollmentDocument,
 } from '../../database/schemas/enrollment.schema';
-import { CreateBasicCourseDto, CourseBasicResponseDto } from './dto/course.dto';
+import {
+  CreateBasicCourseDto,
+  CourseBasicResponseDto,
+  UpdateCourseNameDto,
+} from './dto/course.dto';
 import { ListCoursesQueryDto } from './dto/list-courses-query.dto';
 import { generatePrefixedPublicId } from '../../common/utils/public-id.util';
 
@@ -56,6 +60,36 @@ export class CoursesService {
       throw new NotFoundException('Course not found');
     }
     await this.courseModel.deleteOne({ _id: courseId });
+  }
+
+  /**
+   * Update course name
+   * @param courseId - The ID of the course to update
+   * @param updateDto - The DTO containing the new course name
+   * @returns Updated course data
+   */
+  async updateCourseName(
+    courseId: string,
+    updateDto: UpdateCourseNameDto,
+  ): Promise<CourseBasicResponseDto> {
+    const course = await this.courseModel.findById(courseId);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Update course name
+    course.courseName = updateDto.courseName;
+    const updatedCourse = await course.save();
+
+    // Get teacher name for response
+    const teacher = await this.userModel.findById(updatedCourse.teacherId);
+
+    // Get enrollment count
+    const enrollmentCount = await this.enrollmentModel.countDocuments({
+      courseId: updatedCourse._id,
+    });
+
+    return this.mapCourse(updatedCourse, enrollmentCount, teacher?.fullName);
   }
 
   async getCoursesByTeacher(
