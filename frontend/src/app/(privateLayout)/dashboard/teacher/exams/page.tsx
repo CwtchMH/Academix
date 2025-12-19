@@ -3,8 +3,9 @@
 import { useCallback, useMemo } from 'react'
 import { App, Empty, Pagination, Spin, Tooltip } from 'antd'
 import { Badge, Button, Icon, Input, Select } from '@/components/atoms'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useDeleteExam, useExams } from '@/services/api/exam.api'
+import { useTeacherCourses } from '@/services/api/course.api'
 import { useAuth } from '@/stores/auth'
 import { useExamFilters, type ExamStatusFilter } from '@/hooks'
 
@@ -18,6 +19,10 @@ interface ExamRow {
   startTime: string
   endTime: string
   isEditable: boolean
+  /** Course ID for this exam */
+  courseId?: string
+  /** Course name for display */
+  courseName?: string
 }
 
 const statusFilterOptions = [
@@ -74,11 +79,65 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50]
 export default function ExamsPage() {
   const { message, modal } = App.useApp()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
 
-  // Use the exam filters hook for state management
-  const { filters, setSearch, setStatus, setPage, setLimit, queryParams } =
-    useExamFilters({ limit: 10 })
+  // Get courseId from URL query params (passed from courses page)
+  // This is only used for initial filter value when navigating from courses page
+  const urlCourseId = searchParams.get('courseId')
+
+  // Use the exam filters hook for state management (includes courseId filter)
+  // Initialize with courseId from URL if present - after that, filter is controlled by user
+  const {
+    filters,
+    setSearch,
+    setStatus,
+    setCourseId,
+    setPage,
+    setLimit,
+    queryParams
+  } = useExamFilters({
+    limit: 10,
+    // Set initial courseId from URL param, default to 'all' if not present
+    courseId: urlCourseId || 'all'
+  })
+
+  /**
+   * Handle course filter change from dropdown
+   * Updates the filter state and clears URL param to prevent conflicts
+   */
+  const handleCourseChange = useCallback(
+    (value: string | number | undefined) => {
+      const newCourseId = (value ?? 'all') as string
+      setCourseId(newCourseId)
+
+      // Clear URL courseId param to prevent it from overriding user's filter choice
+      // when they navigate back to this page
+      if (urlCourseId) {
+        router.replace('/dashboard/teacher/exams', { scroll: false })
+      }
+    },
+    [setCourseId, urlCourseId, router]
+  )
+
+  // Fetch teacher's courses for the course filter dropdown
+  const { data: coursesData } = useTeacherCourses(user?.id, undefined, {
+    enabled: Boolean(user?.id),
+    refetchOnWindowFocus: false
+  })
+
+  // Build course filter options with "All" option
+  const courseFilterOptions = useMemo(() => {
+    const courses = coursesData?.data.courses ?? []
+    const options = [{ label: 'Course: All', value: 'all' }]
+    courses.forEach((course) => {
+      options.push({
+        label: course.courseName,
+        value: course.id
+      })
+    })
+    return options
+  }, [coursesData])
 
   const {
     data: examsResponse,
@@ -110,6 +169,7 @@ export default function ExamsPage() {
   const pagination = examsResponse?.data.pagination
   const isBusy = isLoading || isFetching
 
+  // Map exams to rows with course info
   const examRows = useMemo<ExamRow[]>(() => {
     return exams.map((exam): ExamRow => {
       const normalizedStatus = normalizeStatus(exam.status)
@@ -120,7 +180,9 @@ export default function ExamsPage() {
         status: normalizedStatus,
         startTime: formatDateTime(exam.startTime),
         endTime: formatDateTime(exam.endTime),
-        isEditable: normalizedStatus === 'scheduled'
+        isEditable: normalizedStatus === 'scheduled',
+        courseId: exam.courseId,
+        courseName: exam.courseName
       }
     })
   }, [exams])
@@ -191,7 +253,9 @@ export default function ExamsPage() {
   )
 
   const renderEmptyState = () => {
-    const hasFilters = filters.search || filters.status !== 'all'
+    // Check if any filters are applied (including course filter)
+    const hasFilters =
+      filters.search || filters.status !== 'all' || filters.courseId !== 'all'
 
     if (hasFilters) {
       return (
@@ -254,6 +318,14 @@ export default function ExamsPage() {
               />
             </div>
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
+              {/* Course Filter Dropdown */}
+              <Select
+                value={filters.courseId}
+                options={courseFilterOptions}
+                onChange={handleCourseChange}
+                className="min-w-[200px]"
+              />
+              {/* Status Filter Dropdown */}
               <Select
                 value={filters.status}
                 options={statusFilterOptions}
@@ -301,6 +373,10 @@ export default function ExamsPage() {
                       <th scope="col" className="px-4 py-3">
                         Title
                       </th>
+                      {/* Course column */}
+                      <th scope="col" className="px-4 py-3">
+                        Course
+                      </th>
                       <th scope="col" className="px-4 py-3">
                         Status
                       </th>
@@ -338,6 +414,10 @@ export default function ExamsPage() {
                         </td>
                         <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">
                           {exam.title || '-'}
+                        </td>
+                        {/* Course name cell */}
+                        <td className="px-4 py-3 text-slate-600 max-w-[180px] truncate">
+                          {exam.courseName || '-'}
                         </td>
                         <td className="px-4 py-3">
                           <Badge

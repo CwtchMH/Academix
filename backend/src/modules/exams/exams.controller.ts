@@ -85,6 +85,12 @@ export class ExamsController {
     description: 'Filter by status',
   })
   @ApiQuery({
+    name: 'courseId',
+    required: false,
+    description:
+      'Filter by course ID. Use "all" to show exams from all courses.',
+  })
+  @ApiQuery({
     name: 'page',
     required: false,
     type: Number,

@@ -268,3 +268,14 @@ export class CourseBasicResponseDto {
   @ApiProperty({ description: 'Last update timestamp' })
   updatedAt: Date;
 }
+
+/**
+ * DTO for updating course name
+ * Only allows updating the course name field
+ */
+export class UpdateCourseNameDto {
+  @ApiProperty({ description: 'New name for the course' })
+  @IsString()
+  @IsNotEmpty()
+  courseName: string;
+}
