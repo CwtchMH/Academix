@@ -247,9 +247,25 @@ export class ExamsService {
           courseMap.set(courseId, course.courseName);
         }
       }
-    } else if (teacherId && courseIds.length > 0) {
-      // Filter exams by all teacher's course IDs
-      query.courseId = { $in: courseIds };
+    } else if (teacherId) {
+      // Filter exams by teacher's courses
+      if (courseIds.length > 0) {
+        // Teacher has courses, filter by their course IDs
+        query.courseId = { $in: courseIds };
+      } else {
+        // Teacher has no courses, return empty result immediately
+        return {
+          exams: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+        };
+      }
     }
 
     // Apply search filter (publicId or title)
